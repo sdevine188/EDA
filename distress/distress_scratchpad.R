@@ -3,6 +3,14 @@ library(XML)
 library(stringr)
 library(dplyr)
 
+# get census county fips codes
+fips_url <- getURL("http://www2.census.gov/geo/docs/reference/codes/files/national_county.txt")
+fips <- read.csv(text = fips_url)
+names(fips) <- c("state", "fips_state", "fips_county", "county", "unk")
+fips$fips_state <- str_pad(fips$fips_state, 2, side = "left", pad = "0")
+fips$fips_county <- str_pad(fips$fips_county, 3, "left", "0")
+fips$fips <- str_c(fips$fips_state, fips$fips_county, sep = "")
+
 # hit census api call for all counties per capita income in 2013 dollars, write to csv, and import
 # http://www.census.gov/data/developers/data-sets/acs-survey-3-year-data.html
 pc_inc <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0088E,NAME&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
@@ -72,20 +80,45 @@ uc_cross <- read.csv("urban/urban_county_crosswalk.csv")
 # if needed, HUD Zipcode to county/tract/CD file
 # http://www.huduser.org/portal/datasets/usps_crosswalk.html
 
-# census, zip code to county
+# census, tract to zip to county relationship file
 # http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt
-zip_county <- getURL("http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_county_rel_10.txt")
-write(zip_county, file = "urban/zip_county_crosswalk.csv")
-zc_cross <- read.csv("urban/zip_county_crosswalk.csv")
+relationship <- getURL("http://www2.census.gov/geo/docs/maps-data/data/rel/zcta_tract_rel_10.txt")
+write(relationship, file = "region/relationship.csv")
+relationship <- read.csv("region/relationship.csv")
 
 # import and clean RIS data
 ris <- read.csv("ris/ris.csv")
 
+# don't use this, it mixes and matches data sources
+# import census ACS employment data by block group
+# http://www.census.gov/people/laborforce/about/acs_employ.html
+block <- getURL("http://www.census.gov/people/laborforce/about/EmploymentStatusforBlockGroups2006-20105-YearACS.csv")
+write(block, file = "unemployment/block.csv")
+block <- read.csv("unemployment/block.csv")
 
 
+# census acs 5yr api for per capita income down to tract level
+# can only get tract one state at a time
+# http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html#notes
+tract_pcinc5 <- getURL("http://api.census.gov/data/2013/acs5?get=NAME,B19301_001E&for=tract:*&in=state:01&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+tract_pcinc5 <- read.csv(text = tract_pcinc5)
 
+# http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html#notes
+# ACS 5 yr 2013 percent unemployed by tract
+tract_unemp <- getURL("http://api.census.gov/data/2013/acs5/profile?get=DP03_0009PE&for=tract:*&in=state:01&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+tract_unemp1 <- read.csv(text = tract_unemp)
 
+# census acs 3yr for unemployment data down to county level, or MSA, CSA, urban area, congressional district, but not tract level
+# http://www.census.gov/data/developers/data-sets/acs-survey-3-year-data.html
+# on variables documentation, the variable name ending in just "E" is a count,  ending in "PE" is a percentage
+data <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0003E,NAME&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+data2 <- read.csv(text = data)
 
+data3 <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0003PE,NAME&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+data4 <- read.csv(text = data3)
+
+data5 <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0009PE,NAME&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+data6 <- read.csv(text = data5)
 
 
 # test of how stats america calculates pc_inc for CSA.  is it population-weighted? yes it is
@@ -113,8 +146,19 @@ names(ct) <- c("pc_inc", "pop")
 ct$avg <- ct$pc_inc * ct$pop
 sum(ct$avg) / sum(ct$pop)
 
+
+# test of census api
 DP05_0001E
-http://api.census.gov/data/2013/acs3/profile?get=DP05_0001E,NAME&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4
+http://api.census.gov/data/2013/acs3/profile?get=DP05_0001E&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4
+
+# http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html#notes
+# ACS 5 yr 2013 percent unemployed by tract
+tract_unemp <- getURL("http://api.census.gov/data/2013/acs5/profile?get=DP03_0009PE&for=tract:*&in=state:01&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+tract_unemp1 <- read.csv(text = tract_unemp)
+
+http://api.census.gov/data/2013/acs5/profile?get=DP03_0009PE&for=state:*&key=
+county_unemp <- getURL("http://api.census.gov/data/2013/acs5/profile?get=DP03_0009PE&for=county:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+county_unemp1 <- read.csv(text = county_unemp)
 
 # test of how stats america calculates unemp for CSA.  is it labor force-weighted? no, it is sum(unemployed) / sum(labor force) for CSA counties
 # but, the statsamerica app does not match this statistic as calculated from statsamerica csv
