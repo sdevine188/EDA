@@ -46,6 +46,29 @@ sum(as.numeric(unemp$unemployed)) / sum(as.numeric(unemp$labor_force))
 unemp <- read.csv("unemployment/unemployment.csv")
 names(unemp) <- c("county", "state", "fips_state_county", "year", "month", "labor_force", "employed", "unemployed", "unemp_rate")
 
+
+# bls api
+# http://www.bls.gov/developers/api_r.htm
+# http://www.bls.gov/developers/api_FAQs.htm#signatures3
+# series id format: http://www.bls.gov/help/hlpforma.htm
+# flat files and codes: http://download.bls.gov/pub/time.series/la/
+library(devtools)
+install_github("mikeasilva/blsAPI")
+library(blsAPI)
+library(jsonlite)
+
+# test from website
+series <- list('seriesid'=c('LAUCN040010000000005','LAUCN040010000000006')) 
+response <- blsAPI(series)
+data <- fromJSON(response)
+str(data$Results$series$data)
+head(data$Results$series$data)
+
+# api is buggy, just use the url to pull json
+# hartford unemployment
+data <- fromJSON("http://api.bls.gov/publicAPI/v1/timeseries/data/LAUCT372800000000003")
+head(data$Results$series$data)
+
 # best method
 # import bls unemployment data from flat FTP:http://www.bls.gov/lau/lausad.htm#flat , http://download.bls.gov/pub/time.series/la/
 # measures: 3-unemployment rate, 4-unemployment, 5-employment, 6-laborforce
