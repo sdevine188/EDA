@@ -199,5 +199,9 @@ gol3$X.PPR._Date[1] <- NA
 merged2 <- rbind(merged, gol3)
 
 # create csv filename for merged data
-write.csv(merged2, file = "master_data.csv", row.names = FALSE)
+date1 <- as.character(Sys.Date())
+date2 <- str_replace_all(date1, "-", "")
+merged_filename <- str_c("master_data_", date2, ".csv")
+
+write.csv(merged2, file = merged_filename, row.names = FALSE)
 
