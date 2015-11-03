@@ -111,8 +111,8 @@ gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INI
 
 gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT,  
                AWARD_FED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
-               COMPETITION_NAME, SPEC_INIT_CODES, ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, 
-               ESTIMATED_PRIVATE_INVESTMENT)
+               COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT)
 
 # convert gol dates to proper format
 gol2$GO_SIGN_DT <- mdy_hm(gol2$GO_SIGN_DT)
@@ -146,6 +146,11 @@ gol3[ , which(names(merged) == "Initiatives")] <- gol2$SPEC_INIT_CODES
 gol3[ , which(names(merged) == "Jobs.Created")] <- gol2$ESTIMATED_JOB_CREATED
 gol3[ , which(names(merged) == "Jobs.Saved")] <- gol2$ESTIMATED_JOB_SAVED
 gol3[ , which(names(merged) == "Private.Investment")] <- gol2$ESTIMATED_PRIVATE_INVESTMENT
+gol3[ , which(names(merged) == "Appl.Street.Addr.1")] <- gol2$APPLICANT_STREET
+gol3[ , which(names(merged) == "Appl.City.Name")] <- gol2$APPLICANT_CITY
+gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
+gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
+
 
 names(gol3) <- names(merged)
 
