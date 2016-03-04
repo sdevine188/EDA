@@ -47,9 +47,9 @@ pc_inc <- mutate(pc_inc, fips_state_county = str_c(fips_state, fips_county))
 pc_inc <- filter(pc_inc, fips_state_county %in% unique(fips$fips_state_county))
 
 # hit census api call for national per capita income in 2013 dollars, write to csv, and import
-pc_inc_nat <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0088E,NAME&for=us:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
-write(pc_inc_nat, file = "income/pc_inc_nat.csv")
-pc_inc_nat <- read.csv("income/pc_inc_nat.csv")
+# pc_inc_nat <- getURL("http://api.census.gov/data/2013/acs3/profile?get=DP03_0088E,NAME&for=us:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
+# write(pc_inc_nat, file = "income/pc_inc_nat.csv")
+# pc_inc_nat <- read.csv("income/pc_inc_nat.csv")
 
 # hit census api call for acs 5yr 2010-2014 national per capita income in 2013 dollars, write to csv, and import
 pc_inc_nat <- getURL("http://api.census.gov/data/2014/acs5/profile?get=DP03_0088E,NAME&for=us:*&key=905cf5cb3674a223a81618f2365a799a6330bed4")
@@ -60,7 +60,8 @@ pc_inc_nat <- read.csv("income/pc_inc_nat_5yr_acs.csv")
 pc_inc_nat <- as.data.frame(lapply(pc_inc_nat, function(x) str_replace(x, "\\[", "")))
 pc_inc_nat <- as.data.frame(lapply(pc_inc_nat, function(x) str_replace(x, "\\]", "")))
 pc_inc_nat <- select(pc_inc_nat, 1)
-names(pc_inc_nat) <- c("pc_inc_nat") # replicates statsamerica value
+pc_inc_nat <- pc_inc_nat[ , 1][1]
+pc_inc_nat <- as.numeric(as.character(pc_inc_nat)) # matches statsamerica
 
 # load bls lau county data from flat files
 # bls <- getURL("http://download.bls.gov/pub/time.series/la/la.data.64.County")
@@ -75,11 +76,24 @@ unemp_bls <- mutate(unemp_bls, value = str_trim(str_sub(unemp_bls[ , 1], start =
 unemp_bls <- mutate(unemp_bls, fips_state = str_sub(fips_state_county, start = 1, end = 2))
 unemp_bls <- mutate(unemp_bls, fips_county = str_sub(fips_state_county, start = 3, end = 5))
 unemp_bls <- select(unemp_bls, fips_state_county:fips_county)
-unemp_bls <- filter(unemp_bls, year > 2013, measure != 3, month != "13", fips_state %in% unique(fips$fips_state))
+unemp_bls <- filter(unemp_bls, year > 2012, measure != 3, month != "13", fips_state %in% unique(fips$fips_state))
+
+write_csv(unemp_bls, "unemployment/unemp_bls.csv")
+unemp_bls <- read_csv("unemployment/unemp_bls.csv")
+
+last_24_months <- function(x){
+        last_24_months = x[1:24, ]
+        last_24_months
+}
+
+bls_24month <- unemp_bls %>%
+        group_by(fips_state_county, measure) %>%
+        arrange(desc(year), desc(month)) %>%
+        do(last_24_months(.))
 
 # calulate national 24 month unemployment rate
 # statsamerica does this by summing the county 24 month unemployed and dividing by the sum of county 24 month labor force
-unemp_nat <- filter(unemp_bls, year > 2013, measure != 3, month != "13", fips_state %in% unique(fips$fips_state))
+unemp_nat <- bls_24month
 # confirm unemp_nat has same 3141 count of counties as stats america - all states, minus the territories
 length(unique(unemp_nat$fips_state_county))
 unemp_nat_sum <- unemp_nat %>%
@@ -132,8 +146,26 @@ str(pc_inc)
 str(pc_inc_nat)
 
 
-add_columns <- select(fips, state, fips_state_county)
+fips_info <- select(fips, state, fips_state_county)
 counties <- pc_inc
-counties <- left_join(counties, add_columns, by = "fips_state_county")
+counties <- left_join(counties, fips_info, by = "fips_state_county")
 
-# need to melt unemp_nat to get measures in columns
+# need to dcast unemp_nat to get measures in columns
+unemp_sum <- unemp_nat %>%
+        group_by(fips_state_county, measure) %>%
+        summarize(
+                value_sum = sum(as.numeric(value))
+        )
+unemp_sum_cast <- dcast(unemp_sum, fips_state_county ~ measure, value.var = "value_sum")
+names(unemp_sum_cast) <- c("fips_state_county", "unemployed", "employed", "laborforce")
+
+# combine unemp_sum_cast with counties
+counties <- left_join(counties, unemp_sum_cast, by = "fips_state_county")
+
+# calculate unemployment rate and add national pc_in and nationaol unemployment rate
+counties <- counties %>%
+        mutate(unemp_rate = unemployed / laborforce) %>%
+        mutate(unemp_rate_nat = unemp_nat_value) %>%
+        mutate(pc_inc_nat = pc_inc_nat)
+
+# create flag for distressed on pc_inc and unemployment criteria
