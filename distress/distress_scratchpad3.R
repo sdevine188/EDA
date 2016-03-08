@@ -164,8 +164,30 @@ counties <- left_join(counties, unemp_sum_cast, by = "fips_state_county")
 
 # calculate unemployment rate and add national pc_in and nationaol unemployment rate
 counties <- counties %>%
-        mutate(unemp_rate = unemployed / laborforce) %>%
-        mutate(unemp_rate_nat = unemp_nat_value) %>%
+        mutate(unemp_rate = (unemployed / laborforce) * 100) %>%
+        mutate(unemp_rate_nat = unemp_nat_value * 100) %>%
         mutate(pc_inc_nat = pc_inc_nat)
 
+counties$pc_inc <- as.numeric(as.character(counties$pc_inc))
+
 # create flag for distressed on pc_inc and unemployment criteria
+# criteria is local unemp rate at least 1 percent higher than national avg
+# local pc_inc less than 80% of national avg
+# https://www.eda.gov/how-to-apply/files/Eligibility-Requirements-and-Criteria.pdf
+counties$pc_inc_distress <- sapply(1:nrow(counties), function(x) 
+        ifelse((counties$pc_inc[x] / counties$pc_inc_nat[x]) * 100 < 80, 1, 0))
+
+counties$pc_inc_threshold <- sapply(1:nrow(counties), function(x) 
+        ((counties$pc_inc[x] / counties$pc_inc_nat[x]) * 100) - 80)
+       
+counties$unemp_distress <- sapply(1:nrow(counties), function(x) 
+        ifelse((counties$unemp_rate[x] - counties$unemp_rate_nat[x]) > 1, 1, 0))
+
+counties$unemp_threshold <- sapply(1:nrow(counties), function(x) (counties$unemp_rate[x] - counties$unemp_rate_nat[x]))
+
+write_csv(counties, "counties.csv")
+counties <- read_csv("counties.csv")
+
+
+
+
