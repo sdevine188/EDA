@@ -33,9 +33,15 @@ emails$last_name <- str_trim(emails$last_name, side = "both")
 # remove distribution lists, which have NA listed for first_name
 emails <- filter(emails, !is.na(first_name))
 
-# load csv
-file_name <- "workforce_training_sic_omissions_20150928.csv"
-df <- read.csv(file_name, stringsAsFactors = FALSE)
+# load csv from the data folder
+file_name <- "data/workforce_training_sic_omissions_20150928.csv"
+df <- read.csv(file_name, stringsAsFactors = FALSE, colClasses = c("Project.No." = "character"))
+
+## should not be any duplicates after removing non-lead applicants, but just in case
+dup <- duplicated(df$Project.No.)
+dup_index <- which(dup == TRUE)
+non_dup_index <- which(dup == FALSE)
+df <- df[non_dup_index, ]
 
 # merge email address into file
 df$edr_address <- "not found"
@@ -44,7 +50,7 @@ for(i in 1:nrow(emails)) {
         if(length(match_rows) > 0 && tolower(str_sub(emails$first_name[i], 1, 1)) == tolower(str_sub(df$EDR.Name[match_rows], 1, 1))) {
                 df$edr_address[match_rows] <- emails$address[i]
         }            
-}
+}           
 
 df$official_address <- "not found"
 for(i in 1:nrow(emails)) {
@@ -57,22 +63,39 @@ for(i in 1:nrow(emails)) {
 # remove rows where email address was not found
 both_not_found <- which(df$edr_address == "not found" & df$official_address == "not found")
 df1 <- df[-both_not_found, ]
+df_not_found <- df[both_not_found, ]
 
 # create variable for email_recipients
-df1$email_recipients <- str_c(df1$edr_address, df1$official_address, sep = ";")
+for(i in 1:nrow(df1)){
+        if(df1$edr_address[i] == "not found" && df1$official_address[i] != "not found"){
+                df1$email_recipients[i] <- df1$official_address[i]        
+        }
+        if(df1$edr_address[i] != "not found" && df1$official_address[i] == "not found"){
+                df1$email_recipients[i] <- df1$edr_address[i]        
+        }
+        if(df1$edr_address[i] != "not found" && df1$official_address[i] != "not found"){
+                df1$email_recipients[i] <- str_c(df1$edr_address[i], df1$official_address[i], sep = ";")
+        }
+}
 
 ## loop through mailing acceptance letters
 # need to customize contents of email
 for(i in 1:nrow(df1)){
         
         ## create custom email variables
-        to <- "sdevine@eda.gov"
-        #         to <- df1$email_recipients 
-        # cc <- str_c("mlofthus@eda.gov", "sdevine@eda.gov")
-        subject <- "test email subject"
-        fy <- str_c("FY", df1$FY[i])
-        body1 <- "Hello,\n\nTest email regarding the %s award to %s, Project #%s.  If you have any questions, please don't hesitate to let me know.\n\nStephen Devine\nProgram Analyst\nPerformance and National Programs Division\nEconomic Development Administration\n202-482-9076"
-        body <- sprintf(body1, fy, df1$Applicant[i], as.character(df1$Project.No.[i]))
+#         to <- str_c("sdevine@eda.gov;indirectcosts@eda.gov")
+#         to <- df1$email_recipients[i] 
+#         cc <- str_c("mlofthus@eda.gov", "sdevine@eda.gov", sep = ";")
+#         cc <- str_c("sdevine@eda.gov;indirectcosts@eda.gov")
+        subject <- str_c("Workforce Training Initiative Code - Project #", df1$Project.No.[i])
+        fy <- str_c("FY", df1$FY[i], sep = " ")
+        body1 <- str_c("Hello,\n\nTo help close out %s, we've been asked to confirm with Regional staff that all the projects which merit the Workforce",
+                        " Training (WT) initiative code are flagged as such in OPCS.  Based on a query of keywords and industry codes in OPCS, Project #%s was identified", 
+                       " as one that potentially merits the WT initiative code.  Can you please confirm by COB Friday, October 9th", 
+                       " whether or not you think the WT iniative code should be flagged for this project?\n\nIf you have any questions, please don't hesitate", 
+                       " to let us know.  Thanks very much.\n\nStephen Devine\nProgram Analyst\nPerformance and National Programs Division\nEconomic",
+                        " Development Administration\n202-482-9076")
+        body <- sprintf(body1, fy, df1$Project.No.[i])
         
         ## init com api
         OutApp <- COMCreate("Outlook.Application")
@@ -88,11 +111,17 @@ for(i in 1:nrow(df1)){
         
         ## add attachment(s) - to add multiple, just keep adding code with new file names
         # bc of email client limitations, attachments must be saved to local folder like desktop or C:, cannot be saved on share drives
-        outMail[["Attachments"]]$Add("C:/users/sdevine/desktop/icr_test/Test123.docx")
-        
+#         outMail[["Attachments"]]$Add("C:/users/sdevine/desktop/icr_test/Test123.docx")
+#         outMail[["Attachments"]]$Add("C:/users/sdevine/desktop/icr_test/Test235.docx")
         
         ## send email                     
         outMail$Send()
         print(str_c("Email sent to ", to))
-#         print(str_c("Email sent to ", df1$email_recipients))
 }
+
+# print # of projects with no email found
+not_found <- length(both_not_found)
+if(length(not_found) == 0L){
+        not_found <- "0"
+}
+print(str_c("There were ", not_found, " projects with no email addresses found."))

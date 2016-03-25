@@ -5,10 +5,10 @@ library(lubridate)
 # set working directory where files are saved
 setwd("G:/PNP/Performance Measurement/master_data")
 
+
 ## read in and clean opcs data
 
 # find current version of option1 file with oit unqueryable/truncated fields
-# opcs file is saved as csv directly from impromptu
 opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
 
 # read-in opcs data from impromptu
@@ -85,20 +85,22 @@ gol_filename <- list.files()[str_detect(list.files(), "gol_20")]
 
 # read in gol data
 gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INIT_CODES" = "character",
-                "APPLICANT_ZIP" = "character"), na.strings = c(""))
+                "APPLICANT_ZIP" = "character"))
 
 gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT,  
-               AWARD_FED_SHARE, APP_FED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
+               AWARD_FED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL)
 
-# compute FY, use GO_SIGN_DT if available, otherwise use RECEIVED_DT, will subset year in code below
-gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {gol2$RECEIVED_DT[row]} else 
-        {gol2$GO_SIGN_DT[row]})
-
 # convert gol dates to proper format
-gol2$FY <- mdy_hm(gol2$FY)
-gol2$FY <- year(gol2$FY)
+gol2$GO_SIGN_DT <- mdy_hm(gol2$GO_SIGN_DT)
+gol2$GO_SIGN_DT <- round_date(gol2$GO_SIGN_DT, "day")
+
+gol2$RECEIVED_DT <- mdy_hm(gol2$RECEIVED_DT)
+gol2$RECEIVED_DT <- round_date(gol2$RECEIVED_DT, "day")
+
+# create gol FY variable
+gol2$FY <- year(gol2$GO_SIGN_DT)
 
 # create empty dataframe with correct number of columns to fit merged and rows to house gol
 gol3 <- as.data.frame(matrix(as.character(""), ncol = ncol(merged), nrow = nrow(gol2)))
@@ -110,18 +112,18 @@ for(i in 1:ncol(gol3)){
 
 # assign gol columns to empty dataframe to map with merged column numbers
 gol3[ , which(names(merged) == "FY")] <- gol2$FY
-gol3[ , which(names(merged) == "Appropriation")] <- gol2$PROGRAM_OFFICE
+# gol3[ , which(names(merged) == "Appr.Code")] <- gol2$PROGRAM1_Code
 gol3[ , which(names(merged) == "Control.")] <- gol2$APPLICATION_ID
 gol3[ , which(names(merged) == "Project.No.")] <- gol2$AWARD_NUMBER
 gol3[ , which(names(merged) == "Appl.Short.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Full.Applicant.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Project.Short.Descrip")] <- gol2$PROJECT_TITLE
 gol3[ , which(names(merged) == "X.PPR._Date")] <- gol2$RECEIVED_DT
+gol3[ , which(names(merged) == "Best.EDA..")] <- gol2$AWARD_FED_SHARE
 gol3[ , which(names(merged) == "X.DEC._Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
 gol3[ , which(names(merged) == "Status")] <- gol2$AWARD_STATUS.1
 gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$COMPETITION_NAME
-gol3[ , which(names(merged) == "Program.Tool.Name")] <- gol2$COMPETITION_NAME
 gol3[ , which(names(merged) == "Initiatives")] <- gol2$SPEC_INIT_CODES
 gol3[ , which(names(merged) == "Jobs.Created")] <- gol2$ESTIMATED_JOB_CREATED
 gol3[ , which(names(merged) == "Jobs.Saved")] <- gol2$ESTIMATED_JOB_SAVED
@@ -131,9 +133,6 @@ gol3[ , which(names(merged) == "Appl.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
-# compute Best.EDA.. from award_fed_share if available, app_fed_share if not
-gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
-{gol2$AWARD_FED_SHARE[row]})
 
 names(gol3) <- names(merged)
 
@@ -150,7 +149,8 @@ gol3$database <- "gol"
 accepted_index <- which(gol3$Status == "Accepted")
 gol3$Status[accepted_index] <- "Approved"
 
-# need to convert gol data fields to posix in order to rbind without error
+# honestly, i can't remember exactly how this works, something about setting format
+# if you comment it out though, the rbind below throws an error for posix formatting
 gol3$Report.Date.3.years[1] <- "1996-09-05"
 gol3$Report.Date.3.years <- ymd(gol3$Report.Date.3.years[1])
 gol3$Report.Date.3.years[1] <- NA
@@ -160,15 +160,15 @@ gol3$Report.Date.6.years[1] <- NA
 gol3$Report.Date.9.years[1] <- "1996-09-05"
 gol3$Report.Date.9.years <- ymd(gol3$Report.Date.9.years[1])
 gol3$Report.Date.9.years[1] <- NA
+gol3$X.PRD._Date[1] <- "1996-09-05"
+gol3$X.PRD._Date <- ymd(gol3$X.PRD._Date)
+gol3$X.PRD._Date[1] <- NA
 gol3$X.PCL._Date[1] <- "1996-09-05"
 gol3$X.PCL._Date <- ymd(gol3$X.PCL._Date)
 gol3$X.PCL._Date[1] <- NA
 gol3$X.PPS._Date[1] <- "1996-09-05"
 gol3$X.PPS._Date <- ymd(gol3$X.PPS._Date)
 gol3$X.PPS._Date[1] <- NA
-gol3$X.PRD._Date[1] <- "1996-09-05"
-gol3$X.PRD._Date <- ymd(gol3$X.PRD._Date)
-gol3$X.PRD._Date[1] <- NA
 gol3$X.PPE._Date[1] <- "1996-09-05"
 gol3$X.PPE._Date <- ymd(gol3$X.PPE._Date)
 gol3$X.PPE._Date[1] <- NA
@@ -184,15 +184,16 @@ gol3$X.GSD._Date[1] <- NA
 gol3$X.GPE._Date[1] <- "1996-09-05"
 gol3$X.GPE._Date <- ymd(gol3$X.GPE._Date)
 gol3$X.GPE._Date[1] <- NA
-gol3$X.DEC._Date <- mdy_hm(gol3$X.DEC._Date)
-gol3$X.PPR._Date <- mdy_hm(gol3$X.PPR._Date)
+
 
 # rbind gol data to merged oit and opcs data
 merged <- rbind(merged, gol3)
 
 # create csv filename for merged data
 date1 <- as.character(Sys.Date())
-date2 <- str_replace_all(date1, "-", "")
-merged_filename <- str_c("master_data_", date2, ".csv")
+merged_filename <- str_c("master_data_", date, ".csv")
+# merged_filename_rds <- str_c("master_data_", date2, ".rds")
 
 write.csv(merged, file = merged_filename, row.names = FALSE, fileEncoding = "UTF-8")
+# write.csv(merged, file = merged_filename, row.names = FALSE)
+# saveRDS(merged, file = merged_filename_rds)
