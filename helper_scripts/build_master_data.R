@@ -121,7 +121,7 @@ gol3[ , which(names(merged) == "X.DEC._Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
 gol3[ , which(names(merged) == "Status")] <- gol2$AWARD_STATUS.1
 gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$COMPETITION_NAME
-gol3[ , which(names(merged) == "Program.Tool.Name")] <- gol2$COMPETITION_NAME
+gol3[ , which(names(merged) == "Prog.Tool.Name")] <- gol2$COMPETITION_NAME
 gol3[ , which(names(merged) == "Initiatives")] <- gol2$SPEC_INIT_CODES
 gol3[ , which(names(merged) == "Jobs.Created")] <- gol2$ESTIMATED_JOB_CREATED
 gol3[ , which(names(merged) == "Jobs.Saved")] <- gol2$ESTIMATED_JOB_SAVED
