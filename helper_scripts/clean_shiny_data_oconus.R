@@ -31,9 +31,9 @@ for(i in 1:nrow(need_app_lat)){
                 print("error: coordinates are null")
                 address <- need_app_lat$app_address[i]
                 print(address)
-                city_state_zip <- str_c(need_app_lat$Appl.City.Name[i], ", ", need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
-                print(city_state_zip)
-                coordinates <- geocode(city_state_zip, service = "bing")
+                state_zip <- str_c(need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_lat$app_lon[i] <- coordinates[2]
@@ -41,9 +41,9 @@ for(i in 1:nrow(need_app_lat)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                city_state_zip <- str_c(need_app_lat$Appl.City.Name[i], ", ", need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
-                print(city_state_zip)
-                coordinates <- geocode(city_state_zip, service = "bing")
+                state_zip <- str_c(need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_lat$app_lon[i] <- coordinates[2]
@@ -85,9 +85,9 @@ for(i in 1:nrow(need_app_lat)){
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                city_state_zip <- str_c(need_app_lat$Appl.City.Name[i], ", ", need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
-                print(city_state_zip)
-                coordinates <- geocode(city_state_zip)
+                state_zip <- str_c(need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip)
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_lat$app_lon[i] <- coordinates[2]
@@ -95,9 +95,9 @@ for(i in 1:nrow(need_app_lat)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                city_state_zip <- str_c(need_app_lat$Appl.City.Name[i], ", ", need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
-                print(city_state_zip)
-                coordinates <- geocode(city_state_zip)
+                state_zip <- str_c(need_app_lat$Appl.State.Abbr[i], ", ", need_app_lat$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip)
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_lat$app_lon[i] <- coordinates[2]

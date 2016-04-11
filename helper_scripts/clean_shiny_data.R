@@ -74,6 +74,17 @@ for(i in 1:nrow(need_app_address)){
                 address <- need_app_address$app_address[i]
                 print(address)
                 state_zip <- str_c(need_app_address$Appl.State.Abbr[i], ", ", need_app_address$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip, service = "bing")
+                coordinates <- unlist(coordinates)
+                print(coordinates)
+                need_app_address$app_lon[i] <- coordinates[2]
+                need_app_address$app_lat[i] <- coordinates[1]
+        }
+        if(is.na(coordinates)){
+                print("error: coordinates are NA")
+                state_zip <- str_c(need_app_address$Appl.State.Abbr[i], ", ", need_app_address$Appl..Zip[i])
+                print(state_zip)
                 coordinates <- geocode(state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
@@ -120,9 +131,19 @@ for(i in 1:nrow(need_app_address_google)){
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                address <- need_app_address_google$app_address[i]
                 state_zip <- str_c(need_app_address_google$Appl.State.Abbr[i], ", ", need_app_address_google$Appl..Zip[i])
-                coordinates <- geocode(state_zip, service = "bing")
+                print(state_zip)
+                coordinates <- geocode(state_zip)
+                coordinates <- unlist(coordinates)
+                print(coordinates)
+                need_app_address_google$app_lon[i] <- coordinates[2]
+                need_app_address_google$app_lat[i] <- coordinates[1]
+        }
+        if(is.na(coordinates)){
+                print("error: coordinates are NA")
+                state_zip <- str_c(need_app_address_google$Appl.State.Abbr[i], ", ", need_app_address_google$Appl..Zip[i])
+                print(state_zip)
+                coordinates <- geocode(state_zip)
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_address_google$app_lon[i] <- coordinates[2]
