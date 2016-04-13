@@ -73,9 +73,11 @@ for(i in 1:nrow(need_app_address)){
                 print("error: coordinates are null")
                 address <- need_app_address$app_address[i]
                 print(address)
-                state_zip <- str_c(need_app_address$Appl.State.Abbr[i], ", ", need_app_address$Appl..Zip[i])
-                print(state_zip)
-                coordinates <- geocode(state_zip, service = "bing")
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                                        need_app_address_google$Appl.State.Abbr[i], ", ", 
+                                        need_app_address_google$Appl..Zip[i])
+                print(city_state_zip)
+                coordinates <- geocode(city_state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_address$app_lon[i] <- coordinates[2]
@@ -83,9 +85,11 @@ for(i in 1:nrow(need_app_address)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                state_zip <- str_c(need_app_address$Appl.State.Abbr[i], ", ", need_app_address$Appl..Zip[i])
-                print(state_zip)
-                coordinates <- geocode(state_zip, service = "bing")
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                                        need_app_address_google$Appl.State.Abbr[i], ", ", 
+                                        need_app_address_google$Appl..Zip[i])
+                print(city_state_zip)
+                coordinates <- geocode(city_state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_address$app_lon[i] <- coordinates[2]
@@ -131,9 +135,11 @@ for(i in 1:nrow(need_app_address_google)){
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                state_zip <- str_c(need_app_address_google$Appl.State.Abbr[i], ", ", need_app_address_google$Appl..Zip[i])
-                print(state_zip)
-                coordinates <- geocode(state_zip)
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                                        need_app_address_google$Appl.State.Abbr[i], ", ", 
+                                        need_app_address_google$Appl..Zip[i])
+                print(city_state_zip)
+                coordinates <- geocode(city_state_zip)
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_address_google$app_lon[i] <- coordinates[2]
@@ -141,9 +147,11 @@ for(i in 1:nrow(need_app_address_google)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                state_zip <- str_c(need_app_address_google$Appl.State.Abbr[i], ", ", need_app_address_google$Appl..Zip[i])
-                print(state_zip)
-                coordinates <- geocode(state_zip)
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                                need_app_address_google$Appl.State.Abbr[i], ", ", 
+                                need_app_address_google$Appl..Zip[i])
+                print(city_state_zip)
+                coordinates <- geocode(city_state_zip)
                 coordinates <- unlist(coordinates)
                 print(coordinates)
                 need_app_address_google$app_lon[i] <- coordinates[2]
@@ -174,6 +182,14 @@ length(which(is.na(shiny_app_data$app_lat)))
 length(which(is.na(shiny_app_data$app_lon)))
 # inspect those still missing app_lat to ensure they are hopeless cases
 filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon)
+
+# jitter duplicate coordinates to avoid overlapping on map
+app_coord <- sapply(1:nrow(shiny_app_data), function(x) str_c(shiny_app_data$app_lat[x], " ", 
+                                                              shiny_app_data$app_lon[x]))
+dup_logical <- duplicated(app_coord)
+dup_index <- which(dup_logical == TRUE)
+dups <- shiny_app_data[dup_index, ]
+dups$
 
 # if posting publically, clean shiny_data_app to remove PII
 # need to confirm the fields match eda press releases and usaspending.gov
