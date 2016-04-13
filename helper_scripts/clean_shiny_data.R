@@ -188,8 +188,60 @@ app_coord <- sapply(1:nrow(shiny_app_data), function(x) str_c(shiny_app_data$app
                                                               shiny_app_data$app_lon[x]))
 dup_logical <- duplicated(app_coord)
 dup_index <- which(dup_logical == TRUE)
-dups <- shiny_app_data[dup_index, ]
-dups$
+shiny_jitter <- shiny_app_data
+shiny_jitter$app_coord <- app_coord
+dups <- shiny_jitter[dup_index, ]
+unique_dups <- unique(dups$app_coord)
+for(i in 1:length(unique_dups)){
+        print(str_c("unique_dups is ", i))
+        dup_i <- unique_dups[i]
+        row_i <- which(shiny_jitter$app_coord == dup_i)
+        shiny_jitter_dup_i <- shiny_jitter[row_i, ]
+        direction_counter <- 1
+        for(x in 1:nrow(shiny_jitter_dup_i)){
+                print(str_c("shiny_jitter_dup_i is ", x))
+                print(str_c("direction_counter is ", direction_counter))
+                loop_multiplier <- ceiling(x / 4)
+                print(str_c("loop_multiplier is ", loop_multiplier))
+                if(direction_counter == 1){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] + .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lat + ", .01*loop_multiplier))
+                        } 
+                if(direction_counter == 2){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] - .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lat - ", .01*loop_multiplier))
+                        } 
+                if(direction_counter == 3){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] + .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lon + ", .01*loop_multiplier))
+                        }
+                if(direction_counter == 4){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] - .01*loop_multiplier
+                        direction_counter <- 1
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lon - ", .01*loop_multiplier))
+                        } else {direction_counter <- direction_counter + 1}
+        }
+}
+
+# check jitter worked ok
+dups2 <- shiny_jitter[dup_index, ]
+head(dups$app_lat)
+head(dups2$app_lat)
+
+# save over shiny_app_data with jitter data
+shiny_app_data <- shiny_jitter
 
 # if posting publically, clean shiny_data_app to remove PII
 # need to confirm the fields match eda press releases and usaspending.gov
