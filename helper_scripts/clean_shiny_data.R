@@ -236,9 +236,14 @@ for(i in 1:length(unique_dups)){
 }
 
 # check jitter worked ok
-dups2 <- shiny_jitter[dup_index, ]
-head(dups$app_lat)
-head(dups2$app_lat)
+app_coord <- sapply(1:nrow(shiny_jitter), function(x) str_c(shiny_jitter$app_lat[x], " ", 
+                                                              shiny_jitter$app_lon[x]))
+shiny_jitter$app_coord <- app_coord
+dup_logical <- duplicated(app_coord)
+sum(dup_logical)
+dup_index <- which(dup_logical == TRUE)
+dups <- shiny_jitter[dup_index, ]
+select(dups, Appl.Short.Name, app_address, app_lat, app_lon) %>% arrange(app_address)
 
 # save over shiny_app_data with jitter data
 shiny_app_data <- shiny_jitter
