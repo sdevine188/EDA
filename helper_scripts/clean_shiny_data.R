@@ -251,10 +251,35 @@ shiny_app_data <- shiny_jitter
 # if posting publically, clean shiny_data_app to remove PII
 # need to confirm the fields match eda press releases and usaspending.gov
 
+# clean known special character issues that break shiny app map
+espanola_row <- which(shiny_app_data$Control. == 76796)
+shiny_app_data$Appl.Short.Name[espanola_row] <- "Espanola Valley FA Ctr"
+shiny_app_data$Full.Applicant.Name[espanola_row] <- "Espanola Valley Fiber Arts Center"
+
+# correct any known geocode errors - some are bing map errors, others are ugly addresses
+setwd("G:/PNP/Performance Measurement/rshinyapp/clean_shiny_data")
+recode <- read_csv("re-geocode_errors.csv")
+
+# loop through list re-geocoding
+for(i in 1:nrow(recode)) {
+        error_address <- recode$error_address[i]
+        error_row <- which(shiny_app_data$app_address == error_address)
+        shiny_app_data$app_lat[error_row] <- recode$app_lat[i]
+        shiny_app_data$app_lon[error_row] <- recode$app_lon[i]
+}
+
 # write shiny data to file
-setwd("G:/PNP/Performance Measurement/rshinyapp")
+setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
 date1 <- as.character(Sys.Date())
 date2 <- str_replace_all(date1, "-", "")
 shiny_filename <- str_c("shiny_app_data_", date2, ".csv")
 write_csv(shiny_app_data, path = shiny_filename)
 
+
+
+
+# helper script to test geocode errors
+# new_geo <- geocode("MD, 24000")
+# new_lat <- new_geo[2]
+# new_lon <- new_geo[1]
+# print(str_c(new_lat, new_lon, sep = " "))
