@@ -19,8 +19,8 @@ md <- master_data
 setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
 
 filename <- list.files()[str_detect(list.files(), "shiny_app_data_20")]
-shiny_app <- read_csv(filename, col_types = list("Control." = col_character()))
-shiny_app2 <- select(shiny_app, Control., app_address, app_lat, app_lon)
+shiny_app_data <- read_csv(filename, col_types = list("Control." = col_character()))
+shiny_app_data <- select(shiny_app_data, Control., app_address, app_lat, app_lon)
 
 ## merge existing shiny data with latest master_data 
 
@@ -28,7 +28,7 @@ shiny_app2 <- select(shiny_app, Control., app_address, app_lat, app_lon)
 # records <- filter(md, Status == "Approved")
 
 records <- md
-records <- left_join(records, shiny_app2, by = "Control.")
+records <- left_join(records, shiny_app_data, by = "Control.")
 
 # only needed on 20160209 when changing variable name from address to app_address
 # names(records)[which(names(records) == "address")] <- "app_address"
@@ -40,6 +40,14 @@ need_app_address <- filter(records, is.na(app_address))
 
 # compile address field to use in geocoding
 need_app_address$app_address <- str_c(need_app_address$Appl.Street.Addr.1, need_app_address$Appl.City.Name, need_app_address$Appl.State.Abbr, need_app_address$Appl..Zip, sep = ", ")
+
+# remove Multi City
+for(i in 1:nrow(need_app_address)) {
+        if(need_app_address$Proj.City.Name[i] == "Multi City") {
+                need_app_address$app_address[i] <- str_c(need_app_address$Proj.ST.Abbr[i], 
+                                                           need_app_address$Proj.ZIP[i], sep = ", ")
+        }     
+}
 need_app_address$app_address <- as.character(need_app_address$app_address)
 
 # geocode addresses
@@ -73,7 +81,7 @@ for(i in 1:nrow(need_app_address)){
                 print("error: coordinates are null")
                 address <- need_app_address$app_address[i]
                 print(address)
-                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
                                         need_app_address_google$Appl.State.Abbr[i], ", ", 
                                         need_app_address_google$Appl..Zip[i])
                 print(city_state_zip)
@@ -85,7 +93,7 @@ for(i in 1:nrow(need_app_address)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
                                         need_app_address_google$Appl.State.Abbr[i], ", ", 
                                         need_app_address_google$Appl..Zip[i])
                 print(city_state_zip)
@@ -101,7 +109,7 @@ for(i in 1:nrow(need_app_address)){
 
 # see how many apps bing could not map, even when trying just the zip code
 # usually these records have too many or too few zip code digits, but some are OCONUS and bing just can't map them
-# try running them through goolgle just in case
+# try running them through google just in case
 length(which(is.na(need_app_address$app_address)))
 length(which(is.na(need_app_address$app_lat)))
 length(which(is.na(need_app_address$app_lon)))
@@ -118,7 +126,7 @@ for(i in 1:nrow(need_app_address_google)){
                                                 print("this is a warning")
                                                 address <- need_app_address_google$app_address[i]
                                                 zip <- need_app_address_google$Appl..Zip[i]
-                                                geocode(zip, service = "bing")
+                                                geocode(zip)
                                         }
                                 },
                                 error = function(e) {
@@ -126,7 +134,7 @@ for(i in 1:nrow(need_app_address_google)){
                                                 print("this is an error")
                                                 address <- need_app_address_google$app_address[i]
                                                 zip <- need_app_address_google$Appl..Zip[i]
-                                                geocode(zip, service = "bing")
+                                                geocode(zip)
                                         }
                                 } 
         )
@@ -135,7 +143,7 @@ for(i in 1:nrow(need_app_address_google)){
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
                                         need_app_address_google$Appl.State.Abbr[i], ", ", 
                                         need_app_address_google$Appl..Zip[i])
                 print(city_state_zip)
@@ -147,7 +155,7 @@ for(i in 1:nrow(need_app_address_google)){
         }
         if(is.na(coordinates)){
                 print("error: coordinates are NA")
-                city_state_zip <- str_c(need_app_address_google$Appl.City.Name, ", ", 
+                city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
                                 need_app_address_google$Appl.State.Abbr[i], ", ", 
                                 need_app_address_google$Appl..Zip[i])
                 print(city_state_zip)
@@ -267,6 +275,141 @@ for(i in 1:nrow(recode)) {
         shiny_app_data$app_lat[error_row] <- recode$app_lat[i]
         shiny_app_data$app_lon[error_row] <- recode$app_lon[i]
 }
+
+
+
+
+
+# geo-code for proj_address
+need_proj_address <- filter(records, is.na(proj_address))
+
+# only needed when cleaning records previously mapped with just bing, but not google
+# need_proj_address_google <- filter(records, !is.na(proj_address) & is.na(app_lat))
+
+# compile address field to use in geocoding
+need_proj_address$proj_address <- str_c(need_proj_address$Proj.City.Name, need_proj_address$Proj.ST.Abbr, 
+                                        need_proj_address$Proj.ZIP, sep = ", ")
+                                      
+# remove Multi City
+for(i in 1:nrow(need_proj_address)) {
+        if(need_proj_address$Proj.City.Name[i] == "Multi City") {
+                need_proj_address$proj_address[i] <- str_c(need_proj_address$Proj.ST.Abbr[i], need_proj_address$Proj.ZIP[i], 
+                                              sep = ", ")
+        }     
+}
+
+need_proj_address$proj_address <- as.character(need_proj_address$proj_address)
+
+# initially map all projects
+need_proj_address1 <- need_proj_address[1:2000, ]
+sum(is.na(need_proj_address1$proj_address))
+sum(is.na(need_proj_address1$proj_lat))
+need_proj_address1 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address1, "need_proj_address1.csv")
+
+# initially map all projects
+need_proj_address2 <- need_proj_address[2001:6000, ]
+sum(is.na(need_proj_address2$proj_address))
+sum(is.na(need_proj_address2$proj_lat))
+need_proj_address2 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address2, "need_proj_address2.csv")
+
+# initially map all projects
+need_proj_address3 <- need_proj_address[6001:10000, ]
+sum(is.na(need_proj_address3$proj_address))
+sum(is.na(need_proj_address3$proj_lat))
+need_proj_address3 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address3, "need_proj_address3.csv")
+
+# initially map all projects
+need_proj_address4 <- need_proj_address[10001:14000, ]
+sum(is.na(need_proj_address4$proj_address))
+sum(is.na(need_proj_address4$proj_lat))
+need_proj_address4 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address4, "need_proj_address4.csv")
+
+# initially map all projects
+need_proj_address5 <- need_proj_address[14001:18000, ]
+sum(is.na(need_proj_address5$proj_address))
+sum(is.na(need_proj_address5$proj_lat))
+need_proj_address5 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address5, "need_proj_address5.csv")
+
+# initially map all projects
+need_proj_address6 <- need_proj_address[18001:22000, ]
+sum(is.na(need_proj_address6$proj_address))
+sum(is.na(need_proj_address6$proj_lat))
+need_proj_address6 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address6, "need_proj_address6.csv")
+
+# initially map all projects
+need_proj_address7 <- need_proj_address[22001:25515, ]
+sum(is.na(need_proj_address7$proj_address))
+sum(is.na(need_proj_address7$proj_lat))
+need_proj_address7 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(need_proj_address7, "need_proj_address7.csv")
+
+need_proj_address %>% select(Proj.City.Name, Proj.ST.Abbr, Proj.ZIP, proj_address) %>% head(.)
+
+# map 
+options(BingMapsKey = "QFG8iBCiInAj6ER1ubuD~I5piVwPPZghOvhCJzBP-1g~AicfV1u7mkoKlY53KfatxR67u-NHXCfu1iEA8dBryA8vlUJy3yu3y0u2cZLWf-D4")
+
+for(i in 1:nrow(need_proj_address1)){
+        coordinates <- tryCatch(geocode(need_proj_address1$proj_address[i], service = "bing"), 
+                                warning = function(w) {
+                                        if(grepl("geocode failed with status ZERO_RESULTS", w)){
+                                                print("this is a warning")
+                                                address <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                                                                 sep = ", ")
+                                                geocode(address, service = "bing")
+                                        }
+                                },
+                                error = function(e) {
+                                        if(grepl("replacement has length zero", e)){
+                                                print("this is an error")
+                                                address <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                                                                 sep = ", ")
+                                                geocode(address, service = "bing")
+                                        }
+                                }
+        )
+        coordinates <- unlist(coordinates)
+        print(i)
+        print(coordinates)
+        if(is.null(coordinates)){
+                print("error: coordinates are null")
+                state_zip <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                                              sep = ", ")
+                print(state_zip)
+                coordinates <- geocode(state_zip)
+                coordinates <- unlist(coordinates)
+                print(coordinates)
+                need_proj_address1$proj_lon[i] <- coordinates[2]
+                need_proj_address1$proj_lat[i] <- coordinates[1]
+        }
+        # if(is.na(coordinates)){
+        #         print("error: coordinates are NA")
+        #         city_state_zip <- str_c(need_proj_address1$Appl.City.Name, ", ", 
+        #                                 need_proj_address1$Appl.State.Abbr[i], ", ", 
+        #                                 need_proj_address1$Appl..Zip[i])
+        #         print(city_state_zip)
+        #         coordinates <- geocode(city_state_zip)
+        #         coordinates <- unlist(coordinates)
+        #         print(coordinates)
+        #         need_proj_address1$proj_lon[i] <- coordinates[2]
+        #         need_proj_address1$proj_lat[i] <- coordinates[1]
+        # }
+        need_proj_address1$proj_lon[i] <- coordinates[2]
+        need_proj_address1$proj_lat[i] <- coordinates[1]
+}
+
 
 # write shiny data to file
 setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
