@@ -361,12 +361,12 @@ need_proj_address %>% select(Proj.City.Name, Proj.ST.Abbr, Proj.ZIP, proj_addres
 # map 
 options(BingMapsKey = "QFG8iBCiInAj6ER1ubuD~I5piVwPPZghOvhCJzBP-1g~AicfV1u7mkoKlY53KfatxR67u-NHXCfu1iEA8dBryA8vlUJy3yu3y0u2cZLWf-D4")
 
-for(i in 1:nrow(need_proj_address1)){
-        coordinates <- tryCatch(geocode(need_proj_address1$proj_address[i], service = "bing"), 
+for(i in 1:nrow(need_proj_address7)){
+        coordinates <- tryCatch(geocode(need_proj_address7$proj_address[i], service = "bing"), 
                                 warning = function(w) {
                                         if(grepl("geocode failed with status ZERO_RESULTS", w)){
                                                 print("this is a warning")
-                                                address <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                                                address <- str_c(need_proj_address7$Proj.ST.Abbr[i], need_proj_address7$Proj.ZIP[i], 
                                                                  sep = ", ")
                                                 geocode(address, service = "bing")
                                         }
@@ -374,7 +374,7 @@ for(i in 1:nrow(need_proj_address1)){
                                 error = function(e) {
                                         if(grepl("replacement has length zero", e)){
                                                 print("this is an error")
-                                                address <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                                                address <- str_c(need_proj_address7$Proj.ST.Abbr[i], need_proj_address7$Proj.ZIP[i], 
                                                                  sep = ", ")
                                                 geocode(address, service = "bing")
                                         }
@@ -385,29 +385,29 @@ for(i in 1:nrow(need_proj_address1)){
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                state_zip <- str_c(need_proj_address1$Proj.ST.Abbr[i], need_proj_address1$Proj.ZIP[i], 
+                state_zip <- str_c(need_proj_address7$Proj.ST.Abbr[i], need_proj_address7$Proj.ZIP[i], 
                                               sep = ", ")
                 print(state_zip)
-                coordinates <- geocode(state_zip)
+                coordinates <- geocode(state_zip, service = "bing")
                 coordinates <- unlist(coordinates)
                 print(coordinates)
-                need_proj_address1$proj_lon[i] <- coordinates[2]
-                need_proj_address1$proj_lat[i] <- coordinates[1]
+                need_proj_address7$proj_lon[i] <- coordinates[2]
+                need_proj_address7$proj_lat[i] <- coordinates[1]
         }
         # if(is.na(coordinates)){
         #         print("error: coordinates are NA")
-        #         city_state_zip <- str_c(need_proj_address1$Appl.City.Name, ", ", 
-        #                                 need_proj_address1$Appl.State.Abbr[i], ", ", 
-        #                                 need_proj_address1$Appl..Zip[i])
+        #         city_state_zip <- str_c(need_proj_address7$Appl.City.Name, ", ", 
+        #                                 need_proj_address7$Appl.State.Abbr[i], ", ", 
+        #                                 need_proj_address7$Appl..Zip[i])
         #         print(city_state_zip)
         #         coordinates <- geocode(city_state_zip)
         #         coordinates <- unlist(coordinates)
         #         print(coordinates)
-        #         need_proj_address1$proj_lon[i] <- coordinates[2]
-        #         need_proj_address1$proj_lat[i] <- coordinates[1]
+        #         need_proj_address7$proj_lon[i] <- coordinates[2]
+        #         need_proj_address7$proj_lat[i] <- coordinates[1]
         # }
-        need_proj_address1$proj_lon[i] <- coordinates[2]
-        need_proj_address1$proj_lat[i] <- coordinates[1]
+        need_proj_address7$proj_lon[i] <- coordinates[2]
+        need_proj_address7$proj_lat[i] <- coordinates[1]
 }
 
 
