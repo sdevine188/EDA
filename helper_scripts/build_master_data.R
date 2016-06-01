@@ -1,6 +1,7 @@
 library(stringr)
 library(dplyr)
 library(lubridate)
+library(readr)
 
 # set working directory where files are saved
 setwd("G:/PNP/Performance Measurement/master_data")
@@ -21,12 +22,15 @@ opcs2 <- opcs
 opcs2$Appl..Zip <- str_pad(opcs2$Appl..Zip, width = 5, side = "left", pad = "0")
 opcs2$Proj.ZIP <- str_pad(opcs2$Proj.ZIP, width = 5, side = "left", pad = "0")
 
+# change blanks for Cons.Non to NA
+blank_index <- which(opcs2$Cons.Non == "")
+opcs2$Cons.Non[blank_index] <- NA
+
 # remove any duplicates
 dup <- (duplicated(opcs2$Control.))
 dup_index <- which(dup == TRUE)
 non_dup_index <- which(dup == FALSE)
 opcs3 <- opcs2[non_dup_index, ]
-
 
 ## read in and clean oit data
 
@@ -88,7 +92,7 @@ gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INI
                 "APPLICANT_ZIP" = "character"), na.strings = c(""))
 
 gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT,  
-               AWARD_FED_SHARE, APP_FED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
+               AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL)
 
@@ -111,6 +115,7 @@ for(i in 1:ncol(gol3)){
 # assign gol columns to empty dataframe to map with merged column numbers
 gol3[ , which(names(merged) == "FY")] <- gol2$FY
 gol3[ , which(names(merged) == "Appropriation")] <- gol2$PROGRAM_OFFICE
+gol3[ , which(names(merged) == "Prog.Abbr")] <- gol2$PROGRAM_OFFICE
 gol3[ , which(names(merged) == "Control.")] <- gol2$APPLICATION_ID
 gol3[ , which(names(merged) == "Project.No.")] <- gol2$AWARD_NUMBER
 gol3[ , which(names(merged) == "Appl.Short.Name")] <- gol2$APPLICANT_NAME
@@ -131,9 +136,13 @@ gol3[ , which(names(merged) == "Appl.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
-# compute Best.EDA.. from award_fed_share if available, app_fed_share if not
+# compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
-{gol2$AWARD_FED_SHARE[row]})
+        {gol2$AWARD_FED_SHARE[row]})
+gol3[ , which(names(merged) == "Local.Applicant..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_NONFED_SHARE[row])) {gol2$APP_NONFED_SHARE[row]} else 
+        {gol2$AWARD_NONFED_SHARE[row]})
+gol3[ , which(names(merged) == "Total.Project..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_NONFED_SHARE[row])) {sum(gol2$APP_NONFED_SHARE[row], gol2$APP_FED_SHARE[row])} else 
+        {sum(gol2$AWARD_NONFED_SHARE[row], gol2$AWARD_FED_SHARE[row])})
 
 names(gol3) <- names(merged)
 
@@ -190,9 +199,139 @@ gol3$X.PPR._Date <- mdy_hm(gol3$X.PPR._Date)
 # rbind gol data to merged oit and opcs data
 merged <- rbind(merged, gol3)
 
+# create Program variable spelling out the Prog.Abbr variable
+merged$Program <- merged$Prog.Abbr
+for(i in 1:nrow(merged)){
+        if(!(is.na(merged$Program[i]))){
+                if(merged$Program[i] == "PW"){
+                        merged$Program[i] <- "Public Works"
+                }
+                if(merged$Program[i] == "PL"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "T9"){
+                        merged$Program[i] <- "Economic Adjustment Assistance"
+                }
+                if(merged$Program[i] == "TJ"){
+                        merged$Program[i] <- "Trade Adjustment Assistance for Firms"
+                }
+                if(merged$Program[i] == "RE"){
+                        merged$Program[i] <- "Research and National Technical Assistance"
+                }
+                if(merged$Program[i] == "EV"){
+                        merged$Program[i] <- "Research and National Technical Assistance"
+                }
+                if(merged$Program[i] == "PL-ATRO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-ATRO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "PL-AURO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-AURO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "PL-CRO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-CRO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "PL-DRO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-DRO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "OIE"){
+                        merged$Program[i] <- "Office of Innovation and Entrepreneurship"
+                }
+                if(merged$Program[i] == "RNTA"){
+                        merged$Program[i] <- "Research and National Technical Assistance"
+                }
+                if(merged$Program[i] == "TAAF"){
+                        merged$Program[i] <- "Trade Adjustment Assistance for Firms"
+                }
+                if(merged$Program[i] == "PL-PRO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-PRO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+                if(merged$Program[i] == "PL-SRO"){
+                        merged$Program[i] <- "Planning"
+                }
+                if(merged$Program[i] == "TA-SRO"){
+                        merged$Program[i] <- "Technical Assistance"
+                }
+        }
+}
+
+# standardize the Prog.Abbr variable across opcs and gol
+for(i in 1:nrow(merged)){
+        if(!(is.na(merged$Prog.Abbr[i]))){
+                if(merged$Prog.Abbr[i] == "T9"){
+                        merged$Prog.Abbr[i] <- "EAA"
+                }
+                if(merged$Prog.Abbr[i] == "TJ"){
+                        merged$Prog.Abbr[i] <- "TAAF"
+                }
+                if(merged$Prog.Abbr[i] == "RE"){
+                        merged$Prog.Abbr[i] <- "RNTA"
+                }
+                if(merged$Prog.Abbr[i] == "EV"){
+                        merged$Prog.Abbr[i] <- "RNTA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-ATRO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-ATRO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-AURO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-AURO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-CRO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-CRO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-DRO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-DRO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-PRO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-PRO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "PL-SRO"){
+                        merged$Prog.Abbr[i] <- "PL"
+                }
+                if(merged$Prog.Abbr[i] == "TA-SRO"){
+                        merged$Prog.Abbr[i] <- "TA"
+                }
+                
+        }
+}
+
 # create csv filename for merged data
 date1 <- as.character(Sys.Date())
 date2 <- str_replace_all(date1, "-", "")
 merged_filename <- str_c("master_data_", date2, ".csv")
 
-write.csv(merged, file = merged_filename, row.names = FALSE, fileEncoding = "UTF-8")
+# write.csv(merged, file = merged_filename, row.names = FALSE, fileEncoding = "UTF-8")
+setwd("C:/Users/sdevine/Desktop/master_data")
+write_csv(merged, merged_filename)
