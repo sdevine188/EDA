@@ -104,6 +104,52 @@ gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {g
 gol2$FY <- mdy_hm(gol2$FY)
 gol2$FY <- year(gol2$FY)
 
+# add state and county fips, and congressional district using gol Appl.Zip and HUD's quarterly crosswalk files
+# https://www.huduser.gov/portal/datasets/usps_crosswalk.html
+
+# add state and county fips
+zip_county_filename <- list.files()[str_detect(list.files(), "ZIP_COUNTY_")]
+zip_county <- read_csv(zip_county_filename)
+gol2$Appl.ZIP.4 <- gol2$APPLICANT_ZIP
+gol2$APPLICANT_ZIP <- str_sub(gol2$APPLICANT_ZIP, 1, 5)
+gol2$app_fips_state_county <- NA
+for(i in 1:nrow(gol2)){
+        if(!(is.na(gol2$APPLICANT_ZIP[i]))){
+                if(gol2$APPLICANT_ZIP[i] %in% zip_county$ZIP){
+                        zip_match_index <- which(zip_county$ZIP == gol2$APPLICANT_ZIP[i])
+                        # note there will likely be some warnings, since some zip codes span multiple counties
+                        # it will just assign the first county in the list though, which isnt great, but better than all NAs
+                        gol2$app_fips_state_county[i] <- zip_county$COUNTY[zip_match_index]
+                }
+        }
+}
+gol2$app_fips_state_county <- str_pad(gol2$app_fips_state_county, width = 5, side = "left", pad = "0")
+gol2$Appl.FIPS.State <- str_sub(gol2$app_fips_state_county, 1, 2)
+gol2$Appl.FIPS.County <- str_sub(gol2$app_fips_state_county, 3, 5)
+
+# add congressional district
+zip_cd_filename <- list.files()[str_detect(list.files(), "ZIP_CD_")]
+# will be problem warnings since some CD values are ** for some reason,
+# these will be marked to NA, which is probably ok since all CDs with NA have ZIPs that are repeated
+# see test below
+zip_cd <- read_csv(zip_cd_filename)
+gol2$Appl.Cong.Dist <- NA
+for(i in 1:nrow(gol2)){
+        if(!(is.na(gol2$APPLICANT_ZIP[i]))){
+                if(gol2$APPLICANT_ZIP[i] %in% zip_cd$ZIP){
+                        zip_match_index <- which(zip_cd$ZIP == gol2$APPLICANT_ZIP[i])
+                        # note there will likely be some warnings, since some zip codes span multiple counties
+                        # it will just assign the first county in the list though, which isnt great, but better than all NAs
+                        gol2$Appl.Cong.Dist[i] <- zip_cd$CD[zip_match_index]
+                }
+        }
+}
+
+# test to confirm that NA CDs have ZIPs that are repeated, and so the ZIPs will still be assigned
+# x <- problems(zip_cd)
+# zip_na <- zip_cd[x$row, ] %>% select(ZIP)
+# dups <- sapply(1:nrow(zip_na), function(x) length(which(zip_cd$ZIP == zip_na$ZIP[x])))
+
 # create empty dataframe with correct number of columns to fit merged and rows to house gol
 gol3 <- as.data.frame(matrix(as.character(""), ncol = ncol(merged), nrow = nrow(gol2)))
 
@@ -136,10 +182,12 @@ gol3[ , which(names(merged) == "Appl.Street.Addr.1")] <- gol2$APPLICANT_STREET
 gol3[ , which(names(merged) == "Appl.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
-
 gol3[ , which(names(merged) == "Proj.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Proj.ST.Abbr")] <- gol2$APPLICANT_STATE
-gol3[ , which(names(merged) == "Proj.ZIP")] <- gol2$APPLICANT_ZIP
+gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$Appl.FIPS.State
+gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$Appl.FIPS.County
+gol3[ , which(names(merged) == "Appl.ZIP.4")] <- gol2$Appl.ZIP.4
+
 
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
