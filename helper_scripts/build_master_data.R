@@ -110,7 +110,7 @@ gol2$FY <- year(gol2$FY)
 # add state and county fips
 zip_county_filename <- list.files()[str_detect(list.files(), "ZIP_COUNTY_")]
 zip_county <- read_csv(zip_county_filename)
-gol2$Appl.ZIP.4 <- gol2$APPLICANT_ZIP
+gol2$Appl.ZIP.4 <- str_sub(gol2$APPLICANT_ZIP, -4)
 gol2$APPLICANT_ZIP <- str_sub(gol2$APPLICANT_ZIP, 1, 5)
 gol2$app_fips_state_county <- NA
 for(i in 1:nrow(gol2)){
@@ -182,13 +182,16 @@ gol3[ , which(names(merged) == "Appl.Street.Addr.1")] <- gol2$APPLICANT_STREET
 gol3[ , which(names(merged) == "Appl.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
-gol3[ , which(names(merged) == "Proj.City.Name")] <- gol2$APPLICANT_CITY
-gol3[ , which(names(merged) == "Proj.ST.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$Appl.FIPS.State
 gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$Appl.FIPS.County
 gol3[ , which(names(merged) == "Appl.ZIP.4")] <- gol2$Appl.ZIP.4
-
-
+gol3[ , which(names(merged) == "Appl.Cong.Dist")] <- gol2$Appl.Cong.Dist
+gol3[ , which(names(merged) == "Proj.City.Name")] <- gol2$APPLICANT_CITY
+gol3[ , which(names(merged) == "Proj.ST.Abbr")] <- gol2$APPLICANT_STATE
+gol3[ , which(names(merged) == "Proj.ZIP")] <- gol2$APPLICANT_ZIP
+gol3[ , which(names(merged) == "Proj.FIPS.ST")] <- gol2$Appl.FIPS.State
+gol3[ , which(names(merged) == "Proj.FIPS.Cnty")] <- gol2$Appl.FIPS.County
+gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 

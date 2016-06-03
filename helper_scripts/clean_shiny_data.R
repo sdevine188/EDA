@@ -52,127 +52,63 @@ need_app_address$app_address <- as.character(need_app_address$app_address)
 # replace any NAs with blanks to avoid breaking geocode
 need_app_address$app_address[which(is.na(need_app_address$app_address))] <- ""
 
-# geocode addresses with bing
-# tarfix.geo is booted from CRAN, so can't install it on this machine
-# options(BingMapsKey = "QFG8iBCiInAj6ER1ubuD~I5piVwPPZghOvhCJzBP-1g~AicfV1u7mkoKlY53KfatxR67u-NHXCfu1iEA8dBryA8vlUJy3yu3y0u2cZLWf-D4")
-# 
-# for(i in 1:nrow(need_app_address)){
-#         coordinates <- tryCatch(geocode(need_app_address$app_address[i], service = "bing"), 
-#                                 warning = function(w) {
-#                                         if(grepl("geocode failed with status ZERO_RESULTS", w)){
-#                                                 print("this is a warning")
-#                                                 address <- need_app_address$app_address[i]
-#                                                 print(address)
-#                                                 zip <- need_app_address$Appl..Zip[i]
-#                                                 geocode(zip, service = "bing")
-#                                         }
-#                                 },
-#                                 error = function(e) {
-#                                         if(grepl("replacement has length zero", e)){
-#                                                 print("this is an error")
-#                                                 address <- need_app_address$app_address[i]
-#                                                 print(address)
-#                                                 zip <- need_app_address$Appl..Zip[i]
-#                                                 geocode(zip, service = "bing")
-#                                         }
-#                                 } 
-#         )
-#         coordinates <- unlist(coordinates)
-#         print(i)
-#         print(coordinates)
-#         if(is.null(coordinates)){
-#                 print("error: coordinates are null")
-#                 address <- need_app_address$app_address[i]
-#                 print(address)
-#                 city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
-#                                         need_app_address_google$Appl.State.Abbr[i], ", ", 
-#                                         need_app_address_google$Appl..Zip[i])
-#                 print(city_state_zip)
-#                 coordinates <- geocode(city_state_zip, service = "bing")
-#                 coordinates <- unlist(coordinates)
-#                 print(coordinates)
-#                 need_app_address$app_lon[i] <- coordinates[2]
-#                 need_app_address$app_lat[i] <- coordinates[1]
-#         }
-#         if(is.na(coordinates)){
-#                 print("error: coordinates are NA")
-#                 city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
-#                                         need_app_address_google$Appl.State.Abbr[i], ", ", 
-#                                         need_app_address_google$Appl..Zip[i])
-#                 print(city_state_zip)
-#                 coordinates <- geocode(city_state_zip, service = "bing")
-#                 coordinates <- unlist(coordinates)
-#                 print(coordinates)
-#                 need_app_address$app_lon[i] <- coordinates[2]
-#                 need_app_address$app_lat[i] <- coordinates[1]
-#         }
-#         need_app_address$app_lon[i] <- coordinates[2]
-#         need_app_address$app_lat[i] <- coordinates[1]
-# }
-
-# see how many apps bing could not map, even when trying just the zip code
-# usually these records have too many or too few zip code digits, but some are OCONUS and bing just can't map them
-# try running them through google just in case
-length(which(is.na(need_app_address$app_address)))
-length(which(is.na(need_app_address$app_lat)))
-length(which(is.na(need_app_address$app_lon)))
-bing_failed <- need_app_address[which(is.na(need_app_address$app_lat)), ]
-dim(bing_failed)
-need_app_address_google <- bing_failed
-
-# only need this if cleaning records previously mapped in just bing, not google
-# need_app_address_google <- rbind(need_app_address_google, bing_failed)
+# tarifx.geo is deprecated, so bing maps no longer works, so just use google maps
 
 # run need_app_address in google initially instead of bing due to deprecation
 need_app_address_google <- need_app_address
 
-for(i in 1:nrow(need_app_address_google)){
-        coordinates <- tryCatch(geocode(need_app_address_google$app_address[i]), 
+for(i in 1:nrow(need_app_address)){
+coordinates <- tryCatch(geocode(need_app_address$app_address[i]), 
                                 warning = function(w) {
                                         if(grepl("geocode failed with status ZERO_RESULTS", w)){
                                                 print("this is a warning")
-                                                # address <- need_app_address_google$app_address[i]
-                                                zip <- need_app_address_google$Appl..Zip[i]
-                                                geocode(zip)
+                                                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                                                        address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                                                         sep = ", ")
+                                                        geocode(address)
+                                                } else {
+                                                        print(i)
+                                                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                                                        next
+                                                }
                                         }
                                 },
                                 error = function(e) {
                                         if(grepl("replacement has length zero", e)){
                                                 print("this is an error")
-                                                # address <- need_app_address_google$app_address[i]
-                                                zip <- need_app_address_google$Appl..Zip[i]
-                                                geocode(zip)
+                                                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                                                        address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                                                         sep = ", ")
+                                                        geocode(address)
+                                                } else {
+                                                        print(i)
+                                                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                                                        next
+                                                }
                                         }
-                                } 
+                                }
         )
         coordinates <- unlist(coordinates)
         print(i)
         print(coordinates)
         if(is.null(coordinates)){
                 print("error: coordinates are null")
-                city_state_zip <- str_c(need_app_address_google$Appl.City.Name[i], ", ", 
-                                        need_app_address_google$Appl.State.Abbr[i], ", ", 
-                                        need_app_address_google$Appl..Zip[i])
-                print(city_state_zip)
-                coordinates <- geocode(city_state_zip)
-                coordinates <- unlist(coordinates)
-                print(coordinates)
-                # need_app_address_google$app_lon[i] <- coordinates[2]
-                # need_app_address_google$app_lat[i] <- coordinates[1]
+                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                        
+                        state_zip <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                           sep = ", ")
+                        print(state_zip)
+                        coordinates <- geocode(state_zip)
+                        coordinates <- unlist(coordinates)
+                        print(coordinates)
+                } else {
+                        print(i)
+                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                        next
+                }
         }
-        if(is.na(coordinates)){
-                print("error: coordinates are NA")
-                state_zip <- str_c(need_app_address_google$Appl.State.Abbr[i], ", ",
-                                need_app_address_google$Appl..Zip[i])
-                print(state_zip)
-                coordinates <- geocode(state_zip)
-                coordinates <- unlist(coordinates)
-                print(coordinates)
-                # need_app_address_google$app_lon[i] <- coordinates[2]
-                # need_app_address_google$app_lat[i] <- coordinates[1]
-        }
-        need_app_address_google$app_lon[i] <- coordinates[2]
-        need_app_address_google$app_lat[i] <- coordinates[1]
+        need_app_address$app_lon[i] <- coordinates[2]
+        need_app_address$app_lat[i] <- coordinates[1]
 }
 
 # see how many of the NA's google was not able to map
@@ -433,28 +369,12 @@ for(i in 1:nrow(need_proj_address)){
                         coordinates <- geocode(state_zip)
                         coordinates <- unlist(coordinates)
                         print(coordinates)
-                        # need_proj_address$proj_lon[i] <- coordinates[2]
-                        # need_proj_address$proj_lat[i] <- coordinates[1]
                 } else {
                         print(i)
                         print("Proj.ST.Abbr or Proj.ZIP is NA, skipping to next record")
                         next
                 }
         }
-        # if(is.na(coordinates)){
-        #         print("error: coordinates are NA")
-        #         next
-                # print("error: coordinates are NA")
-                # state <- str_c(need_proj_address$Appl.City.Name, ", ",
-                #                         need_proj_address$Appl.State.Abbr[i], ", ",
-                #                         need_proj_address$Appl..Zip[i])
-                # print(city_state_zip)
-                # coordinates <- geocode(city_state_zip)
-                # coordinates <- unlist(coordinates)
-                # print(coordinates)
-                # need_proj_address$proj_lon[i] <- coordinates[2]
-                # need_proj_address$proj_lat[i] <- coordinates[1]
-        # }
         need_proj_address$proj_lon[i] <- coordinates[2]
         need_proj_address$proj_lat[i] <- coordinates[1]
 }
