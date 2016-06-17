@@ -163,7 +163,12 @@ for(i in 1:nrow(gol2)){
                         # print(i)
                         # print(gol2$app_fips_state_county[i])
                        county_match_index <- which(counties$fips_state_county == gol2$app_fips_state_county[i])
-                       gol2$Appl.Cnty.Name[i] <- counties$county[county_match_index]
+                       county_name <- str_replace(counties$county[county_match_index], " County", "")
+                       county_name <- str_replace(county_name, " Parish", "")
+                       county_name <- str_replace(county_name, " Municipality", "")
+                       county_name <- str_replace(county_name, " Borough", "")
+                       county_name <- str_replace(county_name, " Municipio", "")
+                       gol2$Appl.Cnty.Name[i] <- county_name
                 }
         }
 }
@@ -182,6 +187,36 @@ for(i in 1:nrow(gol2)){
                         # note there will likely be some warnings, since some zip codes span multiple counties
                         # it will just assign the first county in the list though, which isnt great, but better than all NAs
                         gol2$Appl.Cong.Dist[i] <- zip_cd$CD[zip_match_index]
+                }
+        }
+}
+
+# add region
+gol2$Region.Name <- NA
+for(i in 1:nrow(gol2)){
+        if(!(is.na(gol2$APPLICANT_STATE[i]))){
+                if(gol2$APPLICANT_STATE[i] %in% c("AL", "FL", "GA", "KY", "MS", "NC", "SC", "TN")){
+                        gol2$Region.Name[i] <- "Atlanta"
+                }
+                if(gol2$APPLICANT_STATE[i] %in% c("AR", "LA", "NM", "OK", "TX")){
+                        gol2$Region.Name[i] <- "Austin"
+                }
+                if(gol2$APPLICANT_STATE[i] %in% c("IL", "IN", "MI", "MN", "OH", "WI")){
+                        gol2$Region.Name[i] <- "Chicago"
+                }
+                if(gol2$APPLICANT_STATE[i] %in% c("CO", "IA", "KS", "MO", "MT", "ND", 
+                                                  "NE", "SD", "UT", "WY")){
+                        gol2$Region.Name[i] <- "Denver"
+                }
+                if(gol2$APPLICANT_STATE[i] %in% c("CT", "DE", "DC", "ME", "MD", "MA",
+                                                  "NH", "NJ", "NY", "PA", "RI", "VT",
+                                                  "VA", "WV", "PR", "VI")){
+                        gol2$Region.Name[i] <- "Philadelphia"
+                }
+                if(gol2$APPLICANT_STATE[i] %in% c("AL", "AK", "AZ", "CA", "HI", "ID", "NV",
+                                                  "OR", "WA", "AS", "NM", "MP", "MH",
+                                                  "PW", "GU", "FM")){
+                        gol2$Region.Name[i] <- "Seattle"
                 }
         }
 }
@@ -236,6 +271,7 @@ gol3[ , which(names(merged) == "Proj.FIPS.Cnty")] <- gol2$Appl.FIPS.County
 gol3[ , which(names(merged) == "Proj.County.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
+gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
         {gol2$AWARD_FED_SHARE[row]})
