@@ -22,6 +22,15 @@ opcs2 <- opcs
 opcs2$Appl..Zip <- str_pad(opcs2$Appl..Zip, width = 5, side = "left", pad = "0")
 opcs2$Proj.ZIP <- str_pad(opcs2$Proj.ZIP, width = 5, side = "left", pad = "0")
 
+# convert dates to usable date format
+opcs2$PCL.Date <- ymd_hm(opcs2$PCL.Date, tz = "EST")
+opcs2$DEC.Date <- ymd_hm(opcs2$DEC.Date, tz = "EST")
+opcs2$PPR.Date <- ymd_hm(opcs2$PPR.Date, tz = "EST")
+opcs2$PRD.Date <- ymd_hm(opcs2$PRD.Date, tz = "EST")
+opcs2$GSD.Date <- ymd_hm(opcs2$GSD.Date, tz = "EST")
+opcs2$GPE.Date <- ymd_hm(opcs2$GPE.Date, tz = "EST")
+opcs2$GPE.Date <- ymd_hm(opcs2$GPX.Date, tz = "EST")
+
 # change blanks for Cons.Non to NA
 blank_index <- which(opcs2$Cons.Non == "")
 opcs2$Cons.Non[blank_index] <- NA
@@ -40,11 +49,15 @@ oit_filename <- list.files()[str_detect(list.files(), "oit_20")]
 # read in oit data
 oit <- read.csv(oit_filename, stringsAsFactors = FALSE, colClasses = c("CONTROL_NO" = "character"))
 
-# select desired columns from oit
+# select desired columns from oit - Mark pulled in majority of these date fields from Impromptu, keep PPS, PPE, PX1 & PX2
+#oit2 <- select(oit, CONTROL_NO, Proj.Comp..Code, Geographic.Need.Descr., Pressing.Need.Descr., General.Descr.,
+ #                  Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments, X.DEC._Action.Code,
+  #             X.DEC._Date, X.PPR._Action.Code, X.PPR._Date, X.PRD._Action.Code, X.PRD._Date, X.PCL._Date, 
+   #            X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date, X.GSD._Date, X.GPE._Date )
+
 oit2 <- select(oit, CONTROL_NO, Proj.Comp..Code, Geographic.Need.Descr., Pressing.Need.Descr., General.Descr.,
-                   Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments, X.DEC._Action.Code,
-               X.DEC._Date, X.PPR._Action.Code, X.PPR._Date, X.PRD._Action.Code, X.PRD._Date, X.PCL._Date, 
-               X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date, X.GSD._Date, X.GPE._Date )
+               Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments,
+               X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date)
 
 # drop records with duplicate control # from oit_text
 non_lead_applicant <- which(oit2$Proj.Comp..Code != 1)
@@ -57,16 +70,16 @@ non_dup_index <- which(dup == FALSE)
 oit4 <- oit3[non_dup_index, ]
 
 # convert milestone dates to date format
-oit4$X.PCL._Date <- dmy(oit4$X.PCL._Date, tz = "EST")
-oit4$X.DEC._Date <- dmy(oit4$X.DEC._Date, tz = "EST")
-oit4$X.PPR._Date <- dmy(oit4$X.PPR._Date, tz = "EST")
-oit4$X.PRD._Date <- dmy(oit4$X.PRD._Date, tz = "EST")
+#oit4$X.PCL._Date <- dmy(oit4$X.PCL._Date, tz = "EST")
+#oit4$X.DEC._Date <- dmy(oit4$X.DEC._Date, tz = "EST")
+#oit4$X.PPR._Date <- dmy(oit4$X.PPR._Date, tz = "EST")
+#oit4$X.PRD._Date <- dmy(oit4$X.PRD._Date, tz = "EST")
 oit4$X.PPS._Date <- dmy(oit4$X.PPS._Date, tz = "EST")
 oit4$X.PPE._Date <- dmy(oit4$X.PPE._Date, tz = "EST")
 oit4$X.PX1._Date <- dmy(oit4$X.PX1._Date, tz = "EST")
 oit4$X.PX2._Date <- dmy(oit4$X.PX2._Date, tz = "EST")
-oit4$X.GSD._Date <- dmy(oit4$X.GSD._Date, tz = "EST")
-oit4$X.GPE._Date <- dmy(oit4$X.GPE._Date, tz = "EST")
+#oit4$X.GSD._Date <- dmy(oit4$X.GSD._Date, tz = "EST")
+#oit4$X.GPE._Date <- dmy(oit4$X.GPE._Date, tz = "EST")
 
 ## merge opcs and oit 
 
@@ -94,7 +107,13 @@ gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INI
 gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT,  
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
-               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER)
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS)
+
+for(i in 1:nrow(gol2)){
+      if(is.na(gol2$AWARD_STATUS.1[i])){
+            gol2$AWARD_STATUS.1[i] <- gol2$APPLICATION_STATUS[i]
+      }
+}
 
 # compute FY, use GO_SIGN_DT if available, otherwise use RECEIVED_DT, will subset year in code below
 gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {gol2$RECEIVED_DT[row]} else 
@@ -126,6 +145,28 @@ for(i in 1:nrow(gol2)){
 gol2$app_fips_state_county <- str_pad(gol2$app_fips_state_county, width = 5, side = "left", pad = "0")
 gol2$Appl.FIPS.State <- str_sub(gol2$app_fips_state_county, 1, 2)
 gol2$Appl.FIPS.County <- str_sub(gol2$app_fips_state_county, 3, 5)
+
+# add county names
+# using 2010 counties & fips from census https://www.census.gov/geo/reference/codes/cou.html
+counties <- read_csv("us_counties.txt", col_names = c("state", "fips_state", "fips_county", "county", "some_variable"))
+counties$fips_state_county <- str_c(counties$fips_state, counties$fips_county)
+
+# test to see if any gol2 counties are not in census list of counties
+match <- which(gol2$app_fips_state_county %in% counties$fips_state_county)
+non_match <- gol2[-match, ]
+non_match %>% select(app_fips_state_county)
+
+gol2$Appl.Cnty.Name <- NA
+for(i in 1:nrow(gol2)){
+        if(!(is.na(gol2$app_fips_state_county[i]))){
+                if(gol2$app_fips_state_county[i] %in% counties$fips_state_county) {
+                        # print(i)
+                        # print(gol2$app_fips_state_county[i])
+                       county_match_index <- which(counties$fips_state_county == gol2$app_fips_state_county[i])
+                       gol2$Appl.Cnty.Name[i] <- counties$county[county_match_index]
+                }
+        }
+}
 
 # add congressional district
 zip_cd_filename <- list.files()[str_detect(list.files(), "ZIP_CD_")]
@@ -168,8 +209,8 @@ gol3[ , which(names(merged) == "Project.No.")] <- gol2$AWARD_NUMBER
 gol3[ , which(names(merged) == "Appl.Short.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Full.Applicant.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Project.Short.Descrip")] <- gol2$PROJECT_TITLE
-gol3[ , which(names(merged) == "X.PPR._Date")] <- gol2$RECEIVED_DT
-gol3[ , which(names(merged) == "X.DEC._Date")] <- gol2$GO_SIGN_DT
+gol3[ , which(names(merged) == "PPR.Date")] <- gol2$RECEIVED_DT
+gol3[ , which(names(merged) == "DEC.Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
 gol3[ , which(names(merged) == "Status")] <- gol2$AWARD_STATUS.1
 gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$COMPETITION_NAME
@@ -184,6 +225,7 @@ gol3[ , which(names(merged) == "Appl.State.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Appl..Zip")] <- gol2$APPLICANT_ZIP
 gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$Appl.FIPS.State
 gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$Appl.FIPS.County
+gol3[ , which(names(merged) == "Appl.Cnty.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Appl.ZIP.4")] <- gol2$Appl.ZIP.4
 gol3[ , which(names(merged) == "Appl.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Proj.City.Name")] <- gol2$APPLICANT_CITY
@@ -191,6 +233,7 @@ gol3[ , which(names(merged) == "Proj.ST.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Proj.ZIP")] <- gol2$APPLICANT_ZIP
 gol3[ , which(names(merged) == "Proj.FIPS.ST")] <- gol2$Appl.FIPS.State
 gol3[ , which(names(merged) == "Proj.FIPS.Cnty")] <- gol2$Appl.FIPS.County
+gol3[ , which(names(merged) == "Proj.County.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
@@ -226,15 +269,15 @@ gol3$Report.Date.6.years[1] <- NA
 gol3$Report.Date.9.years[1] <- "1996-09-05"
 gol3$Report.Date.9.years <- ymd(gol3$Report.Date.9.years[1])
 gol3$Report.Date.9.years[1] <- NA
-gol3$X.PCL._Date[1] <- "1996-09-05"
-gol3$X.PCL._Date <- ymd(gol3$X.PCL._Date)
-gol3$X.PCL._Date[1] <- NA
+gol3$PCL.Date[1] <- "1996-09-05"
+gol3$PCL.Date <- ymd(gol3$PCL.Date)
+gol3$PCL.Date[1] <- NA
 gol3$X.PPS._Date[1] <- "1996-09-05"
 gol3$X.PPS._Date <- ymd(gol3$X.PPS._Date)
 gol3$X.PPS._Date[1] <- NA
-gol3$X.PRD._Date[1] <- "1996-09-05"
-gol3$X.PRD._Date <- ymd(gol3$X.PRD._Date)
-gol3$X.PRD._Date[1] <- NA
+gol3$PRD.Date[1] <- "1996-09-05"
+gol3$PRD.Date <- ymd(gol3$PRD.Date)
+gol3$PRD.Date[1] <- NA
 gol3$X.PPE._Date[1] <- "1996-09-05"
 gol3$X.PPE._Date <- ymd(gol3$X.PPE._Date)
 gol3$X.PPE._Date[1] <- NA
@@ -244,14 +287,14 @@ gol3$X.PX1._Date[1] <- NA
 gol3$X.PX2._Date[1] <- "1996-09-05"
 gol3$X.PX2._Date <- ymd(gol3$X.PX2._Date)
 gol3$X.PX2._Date[1] <- NA
-gol3$X.GSD._Date[1] <- "1996-09-05"
-gol3$X.GSD._Date <- ymd(gol3$X.GSD._Date)
-gol3$X.GSD._Date[1] <- NA
-gol3$X.GPE._Date[1] <- "1996-09-05"
-gol3$X.GPE._Date <- ymd(gol3$X.GPE._Date)
-gol3$X.GPE._Date[1] <- NA
-gol3$X.DEC._Date <- mdy_hm(gol3$X.DEC._Date)
-gol3$X.PPR._Date <- mdy_hm(gol3$X.PPR._Date)
+gol3$GSD.Date[1] <- "1996-09-05"
+gol3$GSD.Date <- ymd(gol3$GSD.Date)
+gol3$GSD.Date[1] <- NA
+gol3$GPE.Date[1] <- "1996-09-05"
+gol3$GPE.Date <- ymd(gol3$GPE.Date)
+gol3$GPE.Date[1] <- NA
+gol3$DEC.Date <- mdy_hm(gol3$DEC.Date)
+gol3$PPR.Date <- mdy_hm(gol3$PPR.Date)
 
 # rbind gol data to merged oit and opcs data
 merged <- rbind(merged, gol3)
@@ -391,4 +434,5 @@ merged_filename <- str_c("master_data_", date2, ".csv")
 
 # write.csv(merged, file = merged_filename, row.names = FALSE, fileEncoding = "UTF-8")
 setwd("C:/Users/sdevine/Desktop/master_data")
+# setwd("C:/Users/mlofthus/Desktop")
 write_csv(merged, merged_filename)
