@@ -104,7 +104,7 @@ gol_filename <- list.files()[str_detect(list.files(), "gol_20")]
 gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INIT_CODES" = "character",
                 "APPLICANT_ZIP" = "character"), na.strings = c(""))
 
-gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT,  
+gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS)
@@ -244,6 +244,10 @@ gol3[ , which(names(merged) == "Project.No.")] <- gol2$AWARD_NUMBER
 gol3[ , which(names(merged) == "Appl.Short.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Full.Applicant.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Project.Short.Descrip")] <- gol2$PROJECT_TITLE
+gol3[ , which(names(merged) == "General.Descr.")] <- gol2$PROJECT_DESC
+gol3[ , which(names(merged) == "Scope.of.Work")] <- gol2$PROJECT_DESC
+gol3[ , which(names(merged) == "GNS.Descr.")] <- gol2$PROJECT_DESC
+gol3[ , which(names(merged) == "Economic.Impact.or.Benefit")] <- gol2$PROJECT_DESC
 gol3[ , which(names(merged) == "PPR.Date")] <- gol2$RECEIVED_DT
 gol3[ , which(names(merged) == "DEC.Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
@@ -355,10 +359,10 @@ for(i in 1:nrow(merged)){
                         merged$Program[i] <- "Trade Adjustment Assistance for Firms"
                 }
                 if(merged$Program[i] == "RE"){
-                        merged$Program[i] <- "Research and National Technical Assistance"
+                        merged$Program[i] <- "Research"
                 }
                 if(merged$Program[i] == "EV"){
-                        merged$Program[i] <- "Research and National Technical Assistance"
+                        merged$Program[i] <- "Evaluation"
                 }
                 if(merged$Program[i] == "PL-ATRO"){
                         merged$Program[i] <- "Planning"
@@ -416,12 +420,6 @@ for(i in 1:nrow(merged)){
                 }
                 if(merged$Prog.Abbr[i] == "TJ"){
                         merged$Prog.Abbr[i] <- "TAAF"
-                }
-                if(merged$Prog.Abbr[i] == "RE"){
-                        merged$Prog.Abbr[i] <- "RNTA"
-                }
-                if(merged$Prog.Abbr[i] == "EV"){
-                        merged$Prog.Abbr[i] <- "RNTA"
                 }
                 if(merged$Prog.Abbr[i] == "PL-ATRO"){
                         merged$Prog.Abbr[i] <- "PL"
