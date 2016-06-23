@@ -2,7 +2,7 @@ library(ggmap)
 library(stringr)
 library(dplyr)
 library(lubridate)
-library(taRifx.geo)
+# library(taRifx.geo)
 library(readr)
 
 # set working directory where master_data file is saved
@@ -55,71 +55,64 @@ need_app_address$app_address[which(is.na(need_app_address$app_address))] <- ""
 # tarifx.geo is deprecated, so bing maps no longer works, so just use google maps
 
 # run need_app_address in google initially instead of bing due to deprecation
-need_app_address_google <- need_app_address
+# need_app_address_google <- need_app_address
 
 for(i in 1:nrow(need_app_address)){
-coordinates <- tryCatch(geocode(need_app_address$app_address[i]), 
-                                warning = function(w) {
-                                        if(grepl("geocode failed with status ZERO_RESULTS", w)){
-                                                print("this is a warning")
-                                                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
-                                                        address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
-                                                                         sep = ", ")
-                                                        geocode(address)
-                                                } else {
-                                                        print(i)
-                                                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
-                                                        next
+        coordinates <- tryCatch(geocode(need_app_address$app_address[i]), 
+                                        warning = function(w) {
+                                                if(grepl("geocode failed with status ZERO_RESULTS", w)){
+                                                        print("this is a warning")
+                                                        if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                                                                address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                                                                 sep = ", ")
+                                                                geocode(address)
+                                                        } else {
+                                                                print(i)
+                                                                print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                                                                next
+                                                        }
+                                                }
+                                        },
+                                        error = function(e) {
+                                                if(grepl("replacement has length zero", e)){
+                                                        print("this is an error")
+                                                        if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                                                                address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                                                                 sep = ", ")
+                                                                geocode(address)
+                                                        } else {
+                                                                print(i)
+                                                                print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                                                                next
+                                                        }
                                                 }
                                         }
-                                },
-                                error = function(e) {
-                                        if(grepl("replacement has length zero", e)){
-                                                print("this is an error")
-                                                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
-                                                        address <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
-                                                                         sep = ", ")
-                                                        geocode(address)
-                                                } else {
-                                                        print(i)
-                                                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
-                                                        next
-                                                }
-                                        }
-                                }
-        )
-        coordinates <- unlist(coordinates)
-        print(i)
-        print(coordinates)
-        if(is.null(coordinates)){
-                print("error: coordinates are null")
-                if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
-                        
-                        state_zip <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
-                                           sep = ", ")
-                        print(state_zip)
-                        coordinates <- geocode(state_zip)
-                        coordinates <- unlist(coordinates)
-                        print(coordinates)
-                } else {
-                        print(i)
-                        print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
-                        next
+                )
+                coordinates <- unlist(coordinates)
+                print(i)
+                print(coordinates)
+                if(is.null(coordinates)){
+                        print("error: coordinates are null")
+                        if(!(is.na(need_app_address$Appl.State.Abbr[i])) && !(is.na(need_app_address$Appl..Zip[i]))){
+                                
+                                state_zip <- str_c(need_app_address$Appl.State.Abbr[i], need_app_address$Appl..Zip[i], 
+                                                   sep = ", ")
+                                print(state_zip)
+                                coordinates <- geocode(state_zip)
+                                coordinates <- unlist(coordinates)
+                                print(coordinates)
+                        } else {
+                                print(i)
+                                print("Appl.State.Abbr or Appl..Zip is NA, skipping to next record")
+                                next
+                        }
                 }
-        }
-        need_app_address$app_lon[i] <- coordinates[2]
-        need_app_address$app_lat[i] <- coordinates[1]
+                need_app_address$app_lon[i] <- coordinates[2]
+                need_app_address$app_lat[i] <- coordinates[1]
 }
 
 # see how many of the NA's google was not able to map
-length(which(is.na(need_app_address_google$app_lat)))
-
-# re-combine the existing master_data with the newly mapped applications
-# only need this code chunk below if need_app_address_google is > 1
-# need_app_address_minus <- filter(need_app_address, !is.na(need_app_address$app_lat))
-# need_app_address_combined <- rbind(need_app_address_minus, need_app_address_google)
-# records_minus <- filter(records, !is.na(app_address)) 
-# shiny_app_data <- rbind(records_minus, need_app_address_combined)
+sum(is.na(need_app_address$app_address))
 
 # jitter duplicate coordinates to avoid overlapping on map
 app_coord <- sapply(1:nrow(need_app_address), function(x) str_c(need_app_address$app_lat[x], " ", 
@@ -211,9 +204,6 @@ length(which(is.na(shiny_app_data$app_lon)))
 # inspect those still missing app_lat to ensure they are hopeless cases
 filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon)
 
-# if posting publically, clean shiny_data_app to remove PII
-# need to confirm the fields match eda press releases and usaspending.gov
-
 # manual fix if rebuilding shiny_app_data from scratch
 # clean known special character issues that break shiny app map
 # espanola_row <- which(shiny_app_data$Control. == 76796)
@@ -222,31 +212,11 @@ filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon)
 
 
 
-# write shiny data to file
-setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
-date1 <- as.character(Sys.Date())
-date2 <- str_replace_all(date1, "-", "")
-shiny_filename <- str_c("shiny_app_data_", date2, ".csv")
-write_csv(shiny_app_data, shiny_filename)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 # geo-code for proj_address
 need_proj_address <- filter(records, is.na(proj_address))
-
-# only needed when cleaning records previously mapped with just bing, but not google
-# need_proj_address_google <- filter(records, !is.na(proj_address) & is.na(app_lat))
 
 # compile address field to use in geocoding
 need_proj_address$proj_address <- str_c(need_proj_address$Proj.City.Name, need_proj_address$Proj.ST.Abbr, 
@@ -263,68 +233,9 @@ for(i in 1:nrow(need_proj_address)) {
 }
 
 need_proj_address$proj_address <- as.character(need_proj_address$proj_address)
-
-# initially map all projects
-need_proj_address1 <- need_proj_address[1:2000, ]
-sum(is.na(need_proj_address1$proj_address))
-sum(is.na(need_proj_address1$proj_lat))
-need_proj_address1 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address1, "need_proj_address1.csv")
-
-# initially map all projects
-need_proj_address2 <- need_proj_address[2001:6000, ]
-sum(is.na(need_proj_address2$proj_address))
-sum(is.na(need_proj_address2$proj_lat))
-need_proj_address2 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address2, "need_proj_address2.csv")
-
-# initially map all projects
-need_proj_address3 <- need_proj_address[6001:10000, ]
-sum(is.na(need_proj_address3$proj_address))
-sum(is.na(need_proj_address3$proj_lat))
-need_proj_address3 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address3, "need_proj_address3.csv")
-
-# initially map all projects
-need_proj_address4 <- need_proj_address[10001:14000, ]
-sum(is.na(need_proj_address4$proj_address))
-sum(is.na(need_proj_address4$proj_lat))
-need_proj_address4 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address4, "need_proj_address4.csv")
-
-# initially map all projects
-need_proj_address5 <- need_proj_address[14001:18000, ]
-sum(is.na(need_proj_address5$proj_address))
-sum(is.na(need_proj_address5$proj_lat))
-need_proj_address5 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address5, "need_proj_address5.csv")
-
-# initially map all projects
-need_proj_address6 <- need_proj_address[18001:22000, ]
-sum(is.na(need_proj_address6$proj_address))
-sum(is.na(need_proj_address6$proj_lat))
-need_proj_address6 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address6, "need_proj_address6.csv")
-
-# initially map all projects
-need_proj_address7 <- need_proj_address[22001:25515, ]
-sum(is.na(need_proj_address7$proj_address))
-sum(is.na(need_proj_address7$proj_lat))
-need_proj_address7 %>% select(proj_address, proj_lat, proj_lon) %>% head(.)
-setwd("C:/Users/sdevine/Desktop/master_data")
-write_csv(need_proj_address7, "need_proj_address7.csv")
-
 need_proj_address %>% select(Proj.City.Name, Proj.ST.Abbr, Proj.ZIP, proj_address, proj_lat, proj_lon) %>% head(.)
 
 # map 
-options(BingMapsKey = "QFG8iBCiInAj6ER1ubuD~I5piVwPPZghOvhCJzBP-1g~AicfV1u7mkoKlY53KfatxR67u-NHXCfu1iEA8dBryA8vlUJy3yu3y0u2cZLWf-D4")
-
 for(i in 1:nrow(need_proj_address)){
         coordinates <- tryCatch(geocode(need_proj_address$proj_address[i]), 
                                 warning = function(w) {
@@ -379,6 +290,19 @@ for(i in 1:nrow(need_proj_address)){
         need_proj_address$proj_lat[i] <- coordinates[1]
 }
 
+# see how many of the NA's google was not able to map
+sum(is.na(need_proj_address$proj_lat))
+
+# re-combine the existing master_data with the newly mapped and jittered applications
+shiny_app_data_minus <- filter(shiny_app_data, !is.na(proj_lat))
+shiny_app_data <- rbind(shiny_app_data_minus, need_proj_address)
+
+# check to make sure all shiny_app_data records have app_address, app_lat, app_lon
+length(which(is.na(shiny_app_data$proj_address)))
+length(which(is.na(shiny_app_data$proj_lat)))
+length(which(is.na(shiny_app_data$proj_lon)))
+# inspect those still missing app_lat to ensure they are hopeless cases
+filter(shiny_app_data, is.na(proj_lat)) %>% select(proj_address, proj_lat, proj_lon, Proj.ZIP, Proj.City.Name, Proj.ST.Abbr, database, FY)
 
 # jitter duplicate coordinates to avoid overlapping on map
 proj_coord <- sapply(1:nrow(shiny_app_data), function(x) str_c(shiny_app_data$proj_lat[x], " ", 
@@ -388,6 +312,8 @@ dup_index <- which(dup_logical == TRUE)
 shiny_jitter <- shiny_app_data
 shiny_jitter$proj_coord <- proj_coord
 dups <- shiny_jitter[dup_index, ]
+dups <- shiny_jitter[dup_logical, ]
+
 unique_dups <- unique(dups$proj_coord)
 for(i in 1:length(unique_dups)){
         print(str_c("unique_dups is ", i))
@@ -444,6 +370,15 @@ select(dups, Appl.Short.Name, proj_address, proj_lat, proj_lon) %>% arrange(proj
 
 # save over shiny_app_data with jitter data
 shiny_app_data <- shiny_jitter
+shiny_app_data <- shiny_app_data %>% select(-proj_coord)
+
+# write shiny data to file
+# setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
+setwd("C:/Users/sdevine/Desktop/master_data")
+date1 <- as.character(Sys.Date())
+date2 <- str_replace_all(date1, "-", "")
+shiny_filename <- str_c("shiny_app_data_", date2, ".csv")
+write_csv(shiny_app_data, shiny_filename)
 
 
 
