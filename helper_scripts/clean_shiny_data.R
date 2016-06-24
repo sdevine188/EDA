@@ -114,71 +114,6 @@ for(i in 1:nrow(need_app_address)){
 # see how many of the NA's google was not able to map
 sum(is.na(need_app_address$app_address))
 
-# jitter duplicate coordinates to avoid overlapping on map
-app_coord <- sapply(1:nrow(need_app_address), function(x) str_c(need_app_address$app_lat[x], " ", 
-                                                              need_app_address$app_lon[x]))
-dup_logical <- duplicated(app_coord)
-dup_index <- which(dup_logical == TRUE)
-shiny_jitter <- need_app_address
-shiny_jitter$app_coord <- app_coord
-dups <- shiny_jitter[dup_index, ]
-unique_dups <- unique(dups$app_coord)
-for(i in 1:length(unique_dups)){
-        print(str_c("unique_dups is ", i))
-        dup_i <- unique_dups[i]
-        row_i <- which(shiny_jitter$app_coord == dup_i)
-        shiny_jitter_dup_i <- shiny_jitter[row_i, ]
-        direction_counter <- 1
-        for(x in 1:nrow(shiny_jitter_dup_i)){
-                print(str_c("shiny_jitter_dup_i is ", x))
-                print(str_c("direction_counter is ", direction_counter))
-                loop_multiplier <- ceiling(x / 4)
-                print(str_c("loop_multiplier is ", loop_multiplier))
-                if(direction_counter == 1){
-                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] + .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
-                        print(str_c("app_lat + ", .01*loop_multiplier))
-                        } 
-                if(direction_counter == 2){
-                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] - .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
-                        print(str_c("app_lat - ", .01*loop_multiplier))
-                        } 
-                if(direction_counter == 3){
-                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] + .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
-                        print(str_c("app_lon + ", .01*loop_multiplier))
-                        }
-                if(direction_counter == 4){
-                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] - .01*loop_multiplier
-                        direction_counter <- 1
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
-                        print(str_c("app_lon - ", .01*loop_multiplier))
-                        } else {direction_counter <- direction_counter + 1}
-        }
-}
-
-# check jitter worked ok
-app_coord <- sapply(1:nrow(shiny_jitter), function(x) str_c(shiny_jitter$app_lat[x], " ", 
-                                                              shiny_jitter$app_lon[x]))
-shiny_jitter$app_coord <- app_coord
-dup_logical <- duplicated(app_coord)
-sum(dup_logical)
-dup_index <- which(dup_logical == TRUE)
-dups <- shiny_jitter[dup_index, ]
-select(dups, Appl.Short.Name, app_address, app_lat, app_lon) %>% arrange(app_address)
-
-# save over need_app_address with jitter data
-need_app_address <- shiny_jitter
-
 # correct any known geocode errors - some are bing map errors, others are ugly addresses
 setwd("G:/PNP/Performance Measurement/rshinyapp/clean_shiny_data")
 recode <- read_csv("re-geocode_errors.csv")
@@ -194,7 +129,6 @@ for(i in 1:nrow(recode)) {
 
 # re-combine the existing master_data with the newly mapped and jittered applications
 records_minus <- filter(records, !is.na(app_address))
-need_app_address <- need_app_address %>% select(-app_coord)
 shiny_app_data <- rbind(records_minus, need_app_address)
 
 # check to make sure all shiny_app_data records have app_address, app_lat, app_lon
@@ -216,7 +150,7 @@ filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon)
 
 
 # geo-code for proj_address
-need_proj_address <- filter(records, is.na(proj_address))
+need_proj_address <- filter(shiny_app_data, is.na(proj_address))
 
 # compile address field to use in geocoding
 need_proj_address$proj_address <- str_c(need_proj_address$Proj.City.Name, need_proj_address$Proj.ST.Abbr, 
@@ -304,7 +238,79 @@ length(which(is.na(shiny_app_data$proj_lon)))
 # inspect those still missing app_lat to ensure they are hopeless cases
 filter(shiny_app_data, is.na(proj_lat)) %>% select(proj_address, proj_lat, proj_lon, Proj.ZIP, Proj.City.Name, Proj.ST.Abbr, database, FY)
 
-# jitter duplicate coordinates to avoid overlapping on map
+
+
+
+
+
+# jitter duplicate app coordinates to avoid overlapping on map
+app_coord <- sapply(1:nrow(shiny_app_data), function(x) str_c(shiny_app_data$app_lat[x], " ", 
+                                                              shiny_app_data$app_lon[x]))
+dup_logical <- duplicated(app_coord)
+dup_index <- which(dup_logical == TRUE)
+shiny_jitter <- shiny_app_data
+shiny_jitter$app_coord <- app_coord
+dups <- shiny_jitter[dup_index, ]
+unique_dups <- unique(dups$app_coord)
+
+for(i in 1:length(unique_dups)){
+        print(str_c("unique_dups is ", i))
+        dup_i <- unique_dups[i]
+        row_i <- which(shiny_jitter$app_coord == dup_i)
+        shiny_jitter_dup_i <- shiny_jitter[row_i, ]
+        direction_counter <- 1
+        for(x in 1:nrow(shiny_jitter_dup_i)){
+                print(str_c("shiny_jitter_dup_i is ", x))
+                print(str_c("direction_counter is ", direction_counter))
+                loop_multiplier <- ceiling(x / 4)
+                print(str_c("loop_multiplier is ", loop_multiplier))
+                if(direction_counter == 1){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] + .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lat + ", .01*loop_multiplier))
+                } 
+                if(direction_counter == 2){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] - .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lat - ", .01*loop_multiplier))
+                } 
+                if(direction_counter == 3){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] + .01*loop_multiplier
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lon + ", .01*loop_multiplier))
+                }
+                if(direction_counter == 4){
+                        shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
+                        shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] - .01*loop_multiplier
+                        direction_counter <- 1
+                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        print(str_c("app_lon - ", .01*loop_multiplier))
+                } else {direction_counter <- direction_counter + 1}
+        }
+}
+
+# check jitter worked ok
+app_coord <- sapply(1:nrow(shiny_jitter), function(x) str_c(shiny_jitter$app_lat[x], " ", 
+                                                            shiny_jitter$app_lon[x]))
+shiny_jitter$app_coord <- app_coord
+dup_logical <- duplicated(app_coord)
+sum(dup_logical)
+dup_index <- which(dup_logical == TRUE)
+dups <- shiny_jitter[dup_index, ]
+select(dups, Appl.Short.Name, app_address, app_lat, app_lon, app_coord) %>% arrange(app_address) %>% data.frame(.)
+
+# save over need_app_address with jitter data
+shiny_app_data <- shiny_jitter
+shiny_app_data <- shiny_app_data %>% select(-app_coord)
+
+# jitter duplicate proj coordinates to avoid overlapping on map
 proj_coord <- sapply(1:nrow(shiny_app_data), function(x) str_c(shiny_app_data$proj_lat[x], " ", 
                                                               shiny_app_data$proj_lon[x]))
 dup_logical <- duplicated(proj_coord)
@@ -313,8 +319,8 @@ shiny_jitter <- shiny_app_data
 shiny_jitter$proj_coord <- proj_coord
 dups <- shiny_jitter[dup_index, ]
 dups <- shiny_jitter[dup_logical, ]
-
 unique_dups <- unique(dups$proj_coord)
+
 for(i in 1:length(unique_dups)){
         print(str_c("unique_dups is ", i))
         dup_i <- unique_dups[i]
@@ -371,6 +377,11 @@ select(dups, Appl.Short.Name, proj_address, proj_lat, proj_lon) %>% arrange(proj
 # save over shiny_app_data with jitter data
 shiny_app_data <- shiny_jitter
 shiny_app_data <- shiny_app_data %>% select(-proj_coord)
+
+
+
+
+
 
 # write shiny data to file
 # setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
