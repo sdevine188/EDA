@@ -378,7 +378,15 @@ select(dups, Appl.Short.Name, proj_address, proj_lat, proj_lon) %>% arrange(proj
 shiny_app_data <- shiny_jitter
 shiny_app_data <- shiny_app_data %>% select(-proj_coord)
 
-
+# rename variables
+shiny_app_data <- rename(shiny_app_data, "Control.No." = Control., "EDA.Funding" = Best.EDA.., "Construction" = Cons.Non, 
+       "Total.Proj.Cost" = Total.Project.., "CFDA" = CFDA.., "Appl.County.Name" = Appl.Cnty.Name, 
+       "Appl.ZIP" = Appl..Zip, "Proj.State.Abbr" = Proj.ST.Abbr, "Region.Code" = RO.., "IRS" = IRS.., 
+       "DUNS" = DUNS.., "Proj.Comp.Code" = Proj.Comp..Code,  
+       # "PPR.Code" = PPR.Act, "DEC.Code" = DEC.Act, "GPE.Date" = X.GPE._Date, "GSD.Date" = X.GSD._Date,
+       # "PRD.Code" = X.PRD._Action.Code, "PRD.Date" = X.PRD._Date, "PCL.Date" = X.PCL._Date, 
+       "PPS.Date" = X.PPS._Date, "PPE.Date" = X.PPE._Date, "PX1.Date" = X.PX1._Date, 
+       "PX2.Date" = X.PX2._Date)
 
 
 
