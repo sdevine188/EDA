@@ -1,5 +1,6 @@
 # visually check keyword-only hits
-repat_keywords <- repat %>% filter(!grepl("RP", Initiatives, ignore.case = TRUE)) %>% select(General.Descr., GNS.Descr., Scope.of.Work, Economic.Impact.or.Benefit) 
+species_keywords <- iris %>% select(Species)
+keyword_string <- "setosa|versicolor"
 
 find_keyword_matches <- function(dataframe, keyword_string){
         keyword_matches <- data.frame(matrix(nrow = nrow(dataframe), ncol = ncol(dataframe)))
@@ -18,6 +19,7 @@ find_keyword_matches <- function(dataframe, keyword_string){
         return(keyword_matches)
 }
 
-keyword_string <- "repatriation|reshoring|re-shoring"
-repat_keywords_only <- find_keyword_matches(repat_keywords, keyword_string)
-write_csv(repat_keywords_only, "repat_keywords_only.csv")
+species_keywords_only <- find_keyword_matches(species_keywords, keyword_string)
+write_csv(species_keywords_only, "species_keywords_only.csv")
+
+
