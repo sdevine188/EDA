@@ -50,11 +50,6 @@ oit_filename <- list.files()[str_detect(list.files(), "oit_20")]
 oit <- read.csv(oit_filename, stringsAsFactors = FALSE, colClasses = c("CONTROL_NO" = "character"))
 
 # select desired columns from oit - Mark pulled in majority of these date fields from Impromptu, keep PPS, PPE, PX1 & PX2
-#oit2 <- select(oit, CONTROL_NO, Proj.Comp..Code, Geographic.Need.Descr., Pressing.Need.Descr., General.Descr.,
- #                  Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments, X.DEC._Action.Code,
-  #             X.DEC._Date, X.PPR._Action.Code, X.PPR._Date, X.PRD._Action.Code, X.PRD._Date, X.PCL._Date, 
-   #            X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date, X.GSD._Date, X.GPE._Date )
-
 oit2 <- select(oit, CONTROL_NO, Proj.Comp..Code, Geographic.Need.Descr., Pressing.Need.Descr., General.Descr.,
                Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments,
                X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date)
@@ -70,16 +65,10 @@ non_dup_index <- which(dup == FALSE)
 oit4 <- oit3[non_dup_index, ]
 
 # convert milestone dates to date format
-#oit4$X.PCL._Date <- dmy(oit4$X.PCL._Date, tz = "EST")
-#oit4$X.DEC._Date <- dmy(oit4$X.DEC._Date, tz = "EST")
-#oit4$X.PPR._Date <- dmy(oit4$X.PPR._Date, tz = "EST")
-#oit4$X.PRD._Date <- dmy(oit4$X.PRD._Date, tz = "EST")
 oit4$X.PPS._Date <- dmy(oit4$X.PPS._Date, tz = "EST")
 oit4$X.PPE._Date <- dmy(oit4$X.PPE._Date, tz = "EST")
 oit4$X.PX1._Date <- dmy(oit4$X.PX1._Date, tz = "EST")
 oit4$X.PX2._Date <- dmy(oit4$X.PX2._Date, tz = "EST")
-#oit4$X.GSD._Date <- dmy(oit4$X.GSD._Date, tz = "EST")
-#oit4$X.GPE._Date <- dmy(oit4$X.GPE._Date, tz = "EST")
 
 ## merge opcs and oit 
 
