@@ -100,8 +100,8 @@ for(i in 1:nrow(need_app_address)){
                                 next
                         }
                 }
-                need_app_address$app_lon[i] <- coordinates[2]
-                need_app_address$app_lat[i] <- coordinates[1]
+                need_app_address$app_lon[i] <- coordinates[1]
+                need_app_address$app_lat[i] <- coordinates[2]
 }
 
 # see how many of the NA's google was not able to map
@@ -109,7 +109,7 @@ sum(is.na(need_app_address$app_address))
 
 # correct any known geocode errors - some are bing map errors, others are ugly addresses
 setwd("G:/PNP/Performance Measurement/rshinyapp/clean_shiny_data")
-recode <- read_csv("re-geocode_errors.csv")
+recode <- data.frame(read_csv("re-geocode_errors.csv"))
 
 # loop through list re-geocoding
 for(i in 1:nrow(recode)) {
@@ -213,8 +213,8 @@ for(i in 1:nrow(need_proj_address)){
                         next
                 }
         }
-        need_proj_address$proj_lon[i] <- coordinates[2]
-        need_proj_address$proj_lat[i] <- coordinates[1]
+        need_proj_address$proj_lon[i] <- coordinates[1]
+        need_proj_address$proj_lat[i] <- coordinates[2]
 }
 
 # see how many of the NA's google was not able to map
