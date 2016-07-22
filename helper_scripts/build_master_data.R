@@ -93,7 +93,7 @@ gol_filename <- list.files()[str_detect(list.files(), "gol_20")]
 gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INIT_CODES" = "character",
                 "APPLICANT_ZIP" = "character"), na.strings = c(""))
 
-gol2 <- select(gol, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
+gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS)
@@ -183,29 +183,27 @@ for(i in 1:nrow(gol2)){
 # add region
 gol2$Region.Name <- NA
 for(i in 1:nrow(gol2)){
-        if(!(is.na(gol2$APPLICANT_STATE[i]))){
-                if(gol2$APPLICANT_STATE[i] %in% c("AL", "FL", "GA", "KY", "MS", "NC", "SC", "TN")){
+        if(!(is.na(gol2$LINE_OFFICE))){
+                if(gol2$LINE_OFFICE[i] == "ATL"){
                         gol2$Region.Name[i] <- "Atlanta"
                 }
-                if(gol2$APPLICANT_STATE[i] %in% c("AR", "LA", "NM", "OK", "TX")){
+                if(gol2$LINE_OFFICE[i] == "AUS"){
                         gol2$Region.Name[i] <- "Austin"
                 }
-                if(gol2$APPLICANT_STATE[i] %in% c("IL", "IN", "MI", "MN", "OH", "WI")){
+                if(gol2$LINE_OFFICE[i] == "CHI"){
                         gol2$Region.Name[i] <- "Chicago"
                 }
-                if(gol2$APPLICANT_STATE[i] %in% c("CO", "IA", "KS", "MO", "MT", "ND", 
-                                                  "NE", "SD", "UT", "WY")){
+                if(gol2$LINE_OFFICE[i] == "DEN"){
                         gol2$Region.Name[i] <- "Denver"
                 }
-                if(gol2$APPLICANT_STATE[i] %in% c("CT", "DE", "DC", "ME", "MD", "MA",
-                                                  "NH", "NJ", "NY", "PA", "RI", "VT",
-                                                  "VA", "WV", "PR", "VI")){
+                if(gol2$LINE_OFFICE[i] == "PHI"){
                         gol2$Region.Name[i] <- "Philadelphia"
                 }
-                if(gol2$APPLICANT_STATE[i] %in% c("AL", "AK", "AZ", "CA", "HI", "ID", "NV",
-                                                  "OR", "WA", "AS", "NM", "MP", "MH",
-                                                  "PW", "GU", "FM")){
+                if(gol2$LINE_OFFICE[i] == "SEA"){
                         gol2$Region.Name[i] <- "Seattle"
+                }
+                if(gol2$LINE_OFFICE[i] == "HQ"){
+                        gol2$Region.Name[i] <- "Headquarters"
                 }
         }
 }
