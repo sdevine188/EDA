@@ -35,10 +35,15 @@ opcs2$GPE.Date <- ymd_hm(opcs2$GPX.Date, tz = "EST")
 blank_index <- which(opcs2$Cons.Non == "")
 opcs2$Cons.Non[blank_index] <- NA
 
-# pad Appl.State.Abbr and Appl.Cong.Dist, and create Appl.State.Cong variable as unique congressional district identifier 
+# pad Appl.FIPS.ST and Appl.Cong.Dist, and create Appl.State.Cong variable as unique congressional district identifier 
 opcs2$Appl.FIPS.ST <- str_pad(opcs2$Appl.FIPS.ST, width = 2, side = "left", pad = "0")
 opcs2$Appl.Cong.Dist <- str_pad(opcs2$Appl.Cong.Dist, width = 2, side = "left", pad = "0")
 opcs2$Appl.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
+
+# pad Proj.FIPS.ST and Proj.Cong.Dist, and create Proj.State.Cong variable as unique congressional district identifier 
+opcs2$Proj.FIPS.ST <- str_pad(opcs2$Proj.FIPS.ST, width = 2, side = "left", pad = "0")
+opcs2$Proj.Cong.Dist <- str_pad(opcs2$Proj.Cong.Dist, width = 2, side = "left", pad = "0")
+opcs2$Proj.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
 
 # remove any duplicates
 dup <- (duplicated(opcs2$Control.))
@@ -261,6 +266,7 @@ gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$Appl.FIPS.County
 gol3[ , which(names(merged) == "Appl.Cnty.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Appl.ZIP.4")] <- gol2$Appl.ZIP.4
 gol3[ , which(names(merged) == "Appl.Cong.Dist")] <- gol2$Appl.Cong.Dist
+gol3[ , which(names(merged) == "Appl.State.Cong")] <- gol2$Appl.State.Cong
 gol3[ , which(names(merged) == "Proj.City.Name")] <- gol2$APPLICANT_CITY
 gol3[ , which(names(merged) == "Proj.ST.Abbr")] <- gol2$APPLICANT_STATE
 gol3[ , which(names(merged) == "Proj.ZIP")] <- gol2$APPLICANT_ZIP
@@ -268,9 +274,9 @@ gol3[ , which(names(merged) == "Proj.FIPS.ST")] <- gol2$Appl.FIPS.State
 gol3[ , which(names(merged) == "Proj.FIPS.Cnty")] <- gol2$Appl.FIPS.County
 gol3[ , which(names(merged) == "Proj.County.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
+gol3[ , which(names(merged) == "Proj.State.Cong")] <- gol2$Appl.State.Cong
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
-gol3[ , which(names(merged) == "Appl.State.Cong")] <- gol2$Appl.State.Cong
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
         {gol2$AWARD_FED_SHARE[row]})
