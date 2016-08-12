@@ -35,6 +35,11 @@ opcs2$GPE.Date <- ymd_hm(opcs2$GPX.Date, tz = "EST")
 blank_index <- which(opcs2$Cons.Non == "")
 opcs2$Cons.Non[blank_index] <- NA
 
+# pad Appl.State.Abbr and Appl.Cong.Dist, and create Appl.State.Cong variable as unique congressional district identifier 
+opcs2$Appl.FIPS.ST <- str_pad(opcs2$Appl.FIPS.ST, width = 2, side = "left", pad = "0")
+opcs2$Appl.Cong.Dist <- str_pad(opcs2$Appl.Cong.Dist, width = 2, side = "left", pad = "0")
+opcs2$Appl.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
+
 # remove any duplicates
 dup <- (duplicated(opcs2$Control.))
 dup_index <- which(dup == TRUE)
@@ -49,7 +54,7 @@ oit_filename <- list.files()[str_detect(list.files(), "oit_20")]
 # read in oit data
 oit <- read.csv(oit_filename, stringsAsFactors = FALSE, colClasses = c("CONTROL_NO" = "character"))
 
-# select desired columns from oit - Mark pulled in majority of these date fields from Impromptu, keep PPS, PPE, PX1 & PX2
+# select desired columns from oit 
 oit2 <- select(oit, CONTROL_NO, Proj.Comp..Code, Geographic.Need.Descr., Pressing.Need.Descr., General.Descr.,
                Scope.of.Work, GNS.Descr., Economic.Impact.or.Benefit, Comments,
                X.PPS._Date, X.PPE._Date, X.PX1._Date, X.PX2._Date)
@@ -169,13 +174,15 @@ zip_cd_filename <- list.files()[str_detect(list.files(), "ZIP_CD_")]
 # see test below
 zip_cd <- read_csv(zip_cd_filename)
 gol2$Appl.Cong.Dist <- NA
+gol2$Appl.State.Cong <- NA
 for(i in 1:nrow(gol2)){
         if(!(is.na(gol2$APPLICANT_ZIP[i]))){
                 if(gol2$APPLICANT_ZIP[i] %in% zip_cd$ZIP){
                         zip_match_index <- which(zip_cd$ZIP == gol2$APPLICANT_ZIP[i])
                         # note there will likely be some warnings, since some zip codes span multiple counties
                         # it will just assign the first county in the list though, which isnt great, but better than all NAs
-                        gol2$Appl.Cong.Dist[i] <- zip_cd$CD[zip_match_index]
+                        gol2$Appl.State.Cong[i] <- str_pad(zip_cd$CD[zip_match_index], width = 4, side = "left", pad = "0") 
+                        gol2$Appl.Cong.Dist[i] <- str_sub(zip_cd$CD[zip_match_index], start = -2)
                 }
         }
 }
@@ -263,6 +270,7 @@ gol3[ , which(names(merged) == "Proj.County.Name")] <- gol2$Appl.Cnty.Name
 gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
+gol3[ , which(names(merged) == "Appl.State.Cong")] <- gol2$Appl.State.Cong
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
         {gol2$AWARD_FED_SHARE[row]})

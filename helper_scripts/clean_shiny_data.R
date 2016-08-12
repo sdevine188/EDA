@@ -161,6 +161,7 @@ for(i in 1:nrow(need_proj_address)) {
 
 need_proj_address$proj_address <- as.character(need_proj_address$proj_address)
 need_proj_address %>% select(Proj.City.Name, Proj.ST.Abbr, Proj.ZIP, proj_address, proj_lat, proj_lon) %>% head(.)
+dim(need_proj_address)
 
 # map 
 for(i in 1:nrow(need_proj_address)){
@@ -228,7 +229,7 @@ shiny_app_data <- rbind(shiny_app_data_minus, need_proj_address)
 length(which(is.na(shiny_app_data$proj_address)))
 length(which(is.na(shiny_app_data$proj_lat)))
 length(which(is.na(shiny_app_data$proj_lon)))
-# inspect those still missing app_lat to ensure they are hopeless cases
+# inspect those still missing proj_lat to ensure they are hopeless cases
 filter(shiny_app_data, is.na(proj_lat)) %>% select(proj_address, proj_lat, proj_lon, Proj.ZIP, Proj.City.Name, Proj.ST.Abbr, database, FY)
 
 
@@ -245,6 +246,8 @@ shiny_jitter <- shiny_app_data
 shiny_jitter$app_coord <- app_coord
 dups <- shiny_jitter[dup_index, ]
 unique_dups <- unique(dups$app_coord)
+length(unique_dups)
+dups %>% select(app_coord, app_address) %>% data.frame(.) %>% head(., 50)
 
 for(i in 1:length(unique_dups)){
         print(str_c("unique_dups is ", i))
@@ -355,13 +358,14 @@ dup_logical <- duplicated(app_coord)
 sum(dup_logical)
 dup_index <- which(dup_logical == TRUE)
 dups <- shiny_jitter[dup_index, ]
-select(dups, Appl.Short.Name, app_address, app_lat, app_lon, app_coord) %>% arrange(app_address) %>% data.frame(.)
+dim(dups)
+select(dups, Appl.Short.Name, app_address, app_lat, app_lon, app_coord) %>% arrange(app_address) %>% data.frame(.) %>% head(., 50)
 
 # if still duplicate app_coords that should have jitterd, run lines below and jitter loop again (need to debug further)
-dup_logical <- duplicated(app_coord)
-dup_index <- which(dup_logical == TRUE)
-dups <- shiny_jitter[dup_index, ]
-unique_dups <- unique(dups$app_coord)
+# dup_logical <- duplicated(app_coord)
+# dup_index <- which(dup_logical == TRUE)
+# dups <- shiny_jitter[dup_index, ]
+# unique_dups <- unique(dups$app_coord)
 # then run jitter loop, and redo diagnostic jitter check above to see if duplicates successfully jittered
 
 # save over need_app_address with jitter data
@@ -378,6 +382,8 @@ shiny_jitter$proj_coord <- proj_coord
 dups <- shiny_jitter[dup_index, ]
 dups <- shiny_jitter[dup_logical, ]
 unique_dups <- unique(dups$proj_coord)
+length(unique_dups)
+dups %>% select(app_coord, app_address) %>% data.frame(.) %>% head(., 50)
 
 for(i in 1:length(unique_dups)){
         print(str_c("unique_dups is ", i))
@@ -488,7 +494,8 @@ dup_logical <- duplicated(proj_coord)
 sum(dup_logical)
 dup_index <- which(dup_logical == TRUE)
 dups <- shiny_jitter[dup_index, ]
-select(dups, Appl.Short.Name, proj_address, proj_lat, proj_lon) %>% arrange(proj_address)
+dim(dups)
+select(dups, Appl.Short.Name, proj_address, proj_lat, proj_lon) %>% arrange(proj_address) %>% data.frame(.) %>% head(., 50)
 
 # save over shiny_app_data with jitter data
 shiny_app_data <- shiny_jitter
@@ -510,6 +517,7 @@ shiny_app_data <- rename(shiny_app_data, "Control.No." = Control., "EDA.Funding"
 # write shiny data to file
 # setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
 setwd("C:/Users/sdevine/Desktop/master_data")
+# setwd("C:/Users/mlofthus/Desktop")
 date1 <- as.character(Sys.Date())
 date2 <- str_replace_all(date1, "-", "")
 shiny_filename <- str_c("shiny_app_data_", date2, ".csv")
