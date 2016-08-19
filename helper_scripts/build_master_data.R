@@ -8,6 +8,9 @@ setwd("G:/PNP/Performance Measurement/master_data")
 
 ## read in and clean opcs data
 
+# turn-off scientific notation
+options(scipen=999)
+
 # find current version of option1 file with oit unqueryable/truncated fields
 # opcs file is saved as csv directly from impromptu
 opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
@@ -277,7 +280,7 @@ gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Proj.State.Cong")] <- gol2$Appl.State.Cong
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
-# compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_fed_share if not
+# compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
         {gol2$AWARD_FED_SHARE[row]})
 gol3[ , which(names(merged) == "Local.Applicant..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_NONFED_SHARE[row])) {gol2$APP_NONFED_SHARE[row]} else 

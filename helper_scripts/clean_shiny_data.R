@@ -8,6 +8,9 @@ library(readr)
 # set working directory where master_data file is saved
 setwd("G:/PNP/Performance Measurement/master_data")
 
+# turn-off scientific notation
+options(scipen=999)
+
 # read in latest master_data
 master_data_filename <- list.files()[str_detect(list.files(), "master_data_20")]
 master_data <- read_csv(master_data_filename)
@@ -127,9 +130,9 @@ shiny_app_data <- rbind(records_minus, need_app_address)
 # check to make sure all shiny_app_data records have app_address, app_lat, app_lon
 length(which(is.na(shiny_app_data$app_address)))
 length(which(is.na(shiny_app_data$app_lat)))
-length(which(is.na(shiny_app_data$app_lon)))
+na_length <- length(which(is.na(shiny_app_data$app_lon)))
 # inspect those still missing app_lat to ensure they are hopeless cases
-filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon)
+filter(shiny_app_data, is.na(app_lat)) %>% select(app_address, app_lat, app_lon) %>% data.frame(.) %>% head(., na_length)
 
 # manual fix if rebuilding shiny_app_data from scratch
 # clean known special character issues that break shiny app map
@@ -228,9 +231,9 @@ shiny_app_data <- rbind(shiny_app_data_minus, need_proj_address)
 # check to make sure all shiny_app_data records have app_address, app_lat, app_lon
 length(which(is.na(shiny_app_data$proj_address)))
 length(which(is.na(shiny_app_data$proj_lat)))
-length(which(is.na(shiny_app_data$proj_lon)))
+na_length <- length(which(is.na(shiny_app_data$proj_lon)))
 # inspect those still missing proj_lat to ensure they are hopeless cases
-filter(shiny_app_data, is.na(proj_lat)) %>% select(proj_address, proj_lat, proj_lon, Proj.ZIP, Proj.City.Name, Proj.ST.Abbr, database, FY)
+filter(shiny_app_data, is.na(proj_lat)) %>% select(proj_address, proj_lat, proj_lon, Proj.ZIP, Proj.City.Name, Proj.ST.Abbr, database, FY) %>% data.frame(.) %>% head(., na_length)
 
 
 
@@ -509,7 +512,7 @@ shiny_app_data <- rename(shiny_app_data, "Control.No." = Control., "EDA.Funding"
        # "PPR.Code" = PPR.Act, "DEC.Code" = DEC.Act, "GPE.Date" = X.GPE._Date, "GSD.Date" = X.GSD._Date,
        # "PRD.Code" = X.PRD._Action.Code, "PRD.Date" = X.PRD._Date, "PCL.Date" = X.PCL._Date, 
        "PPS.Date" = X.PPS._Date, "PPE.Date" = X.PPE._Date, "PX1.Date" = X.PX1._Date, 
-       "PX2.Date" = X.PX2._Date)
+       "PX2.Date" = X.PX2._Date, "Local.Applicant.Match" = Local.Applicant..)
 
 
 
