@@ -107,9 +107,9 @@ gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INI
                 "APPLICANT_ZIP" = "character"), na.strings = c(""))
 
 gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
-               AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, 
+               AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
-               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS)
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER)
 
 for(i in 1:nrow(gol2)){
       if(is.na(gol2$AWARD_STATUS.1[i])){
@@ -254,8 +254,8 @@ gol3[ , which(names(merged) == "PPR.Date")] <- gol2$RECEIVED_DT
 gol3[ , which(names(merged) == "DEC.Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
 gol3[ , which(names(merged) == "Status")] <- gol2$AWARD_STATUS.1
-gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$COMPETITION_NAME
-gol3[ , which(names(merged) == "Prog.Tool.Name")] <- gol2$COMPETITION_NAME
+gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$RFA_NAME
+gol3[ , which(names(merged) == "Prog.Tool.Name")] <- gol2$RFA_NAME
 gol3[ , which(names(merged) == "Initiatives")] <- gol2$SPEC_INIT_CODES
 gol3[ , which(names(merged) == "Jobs.Created")] <- gol2$ESTIMATED_JOB_CREATED
 gol3[ , which(names(merged) == "Jobs.Saved")] <- gol2$ESTIMATED_JOB_SAVED
@@ -280,6 +280,8 @@ gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Proj.State.Cong")] <- gol2$Appl.State.Cong
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
+gol3[ , which(names(merged) == "DUNS..")] <- gol2$DUNS_NUMBER
+
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
         {gol2$AWARD_FED_SHARE[row]})
