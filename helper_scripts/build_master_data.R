@@ -16,9 +16,10 @@ options(scipen=999)
 opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
 
 # read-in opcs data from impromptu
-opcs <- read.csv(opcs_filename, stringsAsFactors = FALSE, colClasses = c("Control." = "character", 
+opcs <- read.csv(opcs_filename, stringsAsFactors = FALSE, colClasses = c("Control." = "character",
                         "Project.No." = "character", "Proj.ZIP" = "character", "Appl..Zip" = "character",
-                        "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character"))
+                        "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character", 
+                        "Local.Applicant.." = "character", "Total.Project.." = "character", "Best.EDA.." = "character", "Private.Investment" = "character"))
 
 # pad leading zeroes back on zip codes 
 opcs2 <- opcs
@@ -53,6 +54,16 @@ dup <- (duplicated(opcs2$Control.))
 dup_index <- which(dup == TRUE)
 non_dup_index <- which(dup == FALSE)
 opcs3 <- opcs2[non_dup_index, ]
+
+# pad DUNS with zeroes and convert blanks to NA
+errors_index <- which(nchar(opcs3$DUNS..) < 9 & nchar(opcs3$DUNS..) > 0)
+opcs3$DUNS..[errors_index] <- str_pad(opcs3$DUNS..[errors_index], width = 9, side = "right", pad = "0")
+for(i in 1:nrow(opcs3)) {
+        if(opcs3$DUNS..[i] == "") {
+                opcs3$DUNS..[i] <- NA
+        }
+}
+# opcs3$DUNS.. <- sapply(opcs3$DUNS.., function(x) { if(x == "") { x <- NA } })
 
 ## read in and clean oit data
 
@@ -103,14 +114,28 @@ merged$Report.Date.9.years <- ymd_hm(merged$Report.Date.9.years, tz = "EST")
 gol_filename <- list.files()[str_detect(list.files(), "gol_20")]
 
 # read in gol data
-gol <- read.csv(gol_filename, stringsAsFactors = FALSE, colClasses = c("SPEC_INIT_CODES" = "character",
-                "APPLICANT_ZIP" = "character"), na.strings = c(""))
+gol <- read_csv(gol_filename, col_types = list(AWARD_NUMBER = col_character(), APPLICATION_ID = col_character(), AWARD_FED_SHARE = col_number(),
+                                               AWARD_NONFED_SHARE = col_number(), APP_FED_SHARE = col_number(), APP_NONFED_SHARE = col_number(),
+                                               SPEC_INIT_CODES = col_character(), APPLICANT_ZIP = col_character(), ESTIMATED_PRIVATE_INVESTMENT = col_number(),
+                                               DUNS_NUMBER = col_character())) %>% data.frame(.)
+
+# rename duplicate column names to avoid error with select
+names(gol)[which(names(gol) == "AWARD_STATUS")[2]] <- "AWARD_STATUS.1"
+names(gol)[which(names(gol) == "PROPOSAL_STATUS")[2]] <- "PROPOSAL_STATUS.1"
 
 gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER)
 
+# correct DUNS that have four trailing zeroes
+duns_errors <- which(nchar(gol2$DUNS_NUMBER) == 13)
+# test that all duns with 13 digits have four trailing zeroes before removing them
+if(length(duns_errors) == length(which(str_sub(gol2$DUNS_NUMBER[duns_errors], start = 10, end = 13) == "0000"))) {
+        gol2$DUNS_NUMBER[duns_errors] <- sapply(gol2$DUNS_NUMBER[duns_errors], function(x) { str_replace(x, "0000", "") })
+}
+
+# if award_status.1 is NA, interpolate with application_status
 for(i in 1:nrow(gol2)){
       if(is.na(gol2$AWARD_STATUS.1[i])){
             gol2$AWARD_STATUS.1[i] <- gol2$APPLICATION_STATUS[i]
@@ -293,7 +318,7 @@ gol3[ , which(names(merged) == "Total.Project..")] <- sapply(1:nrow(gol2), funct
 names(gol3) <- names(merged)
 
 # check for duplicates
-dup <- (duplicated(gol3$Control.))
+dup <- duplicated(gol3$Control.)
 dup_index <- which(dup == TRUE)
 non_dup_index <- which(dup == FALSE)
 gol3 <- gol3[non_dup_index, ]
@@ -463,7 +488,6 @@ for(i in 1:nrow(merged)){
                 if(merged$Prog.Abbr[i] == "TA-SRO"){
                         merged$Prog.Abbr[i] <- "TA"
                 }
-                
         }
 }
 

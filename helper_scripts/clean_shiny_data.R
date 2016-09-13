@@ -13,14 +13,17 @@ options(scipen=999)
 
 # read in latest master_data
 master_data_filename <- list.files()[str_detect(list.files(), "master_data_20")]
-master_data <- read_csv(master_data_filename)
-md <- master_data
+md <- read_csv(master_data_filename, col_types = list(DUNS.. = col_character(), Local.Applicant.. = col_number(), Total.Project.. = col_number(), Best.EDA.. = col_number(),
+                                                      Private.Investment = col_number(), Control. = col_character(), Project.No. = col_character(), Proj.ZIP = col_character(),
+                                                      Appl..Zip = col_character(), Initiatives = col_character()))
 
 # read in archived shiny data with lat/long info
 setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
 
 shiny_data_filename <- list.files()[str_detect(list.files(), "shiny_app_data_20")]
-shiny_app_data <- read_csv(shiny_data_filename)
+shiny_app_data <- read_csv(shiny_data_filename, col_types = list(DUNS = col_character(), Local.Applicant.Match = col_number(), Total.Proj.Cost = col_number(), EDA.Funding = col_number(),
+                                                                 Private.Investment = col_number(), Control.No. = col_character(), Project.No. = col_character(), Proj.ZIP = col_character(),
+                                                                 Appl.ZIP = col_character(), Initiatives = col_character()))
 shiny_app_data <- select(shiny_app_data, Control.No., app_address, app_lat, app_lon, proj_address, proj_lat, proj_lon)
 
 ## merge existing shiny data with latest master_data 
