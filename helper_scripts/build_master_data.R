@@ -63,7 +63,26 @@ for(i in 1:nrow(opcs3)) {
                 opcs3$DUNS..[i] <- NA
         }
 }
-# opcs3$DUNS.. <- sapply(opcs3$DUNS.., function(x) { if(x == "") { x <- NA } })
+
+# convert MSI.Indicator code into acronym
+opcs3$MSI.Indicator <- as.character(opcs3$MSI.Indicator)
+for(i in 1:nrow(opcs3)) {
+        if(opcs3$MSI.Indicator[i] == "1" & !is.na(opcs3$MSI.Indicator[i])) {
+                opcs3$MSI.Indicator[i] <- "HBCU"
+        }
+        if(opcs3$MSI.Indicator[i] == "2" & !is.na(opcs3$MSI.Indicator[i])) {
+                opcs3$MSI.Indicator[i] <- "HSI"
+        }
+        if(opcs3$MSI.Indicator[i] == "3" & !is.na(opcs3$MSI.Indicator[i])) {
+                opcs3$MSI.Indicator[i] <- "TCU"
+        }
+        if(opcs3$MSI.Indicator[i] == "4" & !is.na(opcs3$MSI.Indicator[i])) {
+                opcs3$MSI.Indicator[i] <- "Other"
+        }
+        if(opcs3$MSI.Indicator[i] == "5" & !is.na(opcs3$MSI.Indicator[i])) {
+                opcs3$MSI.Indicator[i] <- "AKHIPPI"
+        }
+}
 
 ## read in and clean oit data
 
@@ -119,14 +138,10 @@ gol <- read_csv(gol_filename, col_types = list(AWARD_NUMBER = col_character(), A
                                                SPEC_INIT_CODES = col_character(), APPLICANT_ZIP = col_character(), ESTIMATED_PRIVATE_INVESTMENT = col_number(),
                                                DUNS_NUMBER = col_character())) %>% data.frame(.)
 
-# rename duplicate column names to avoid error with select
-names(gol)[which(names(gol) == "AWARD_STATUS")[2]] <- "AWARD_STATUS.1"
-names(gol)[which(names(gol) == "PROPOSAL_STATUS")[2]] <- "PROPOSAL_STATUS.1"
-
 gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
-               AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, AWARD_STATUS.1, RFA_NAME,
+               AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, GRANT_STATUS, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
-               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER)
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE)
 
 # correct DUNS that have four trailing zeroes
 duns_errors <- which(nchar(gol2$DUNS_NUMBER) == 13)
@@ -135,10 +150,10 @@ if(length(duns_errors) == length(which(str_sub(gol2$DUNS_NUMBER[duns_errors], st
         gol2$DUNS_NUMBER[duns_errors] <- sapply(gol2$DUNS_NUMBER[duns_errors], function(x) { str_replace(x, "0000", "") })
 }
 
-# if award_status.1 is NA, interpolate with application_status
+# if grant_status is NA, interpolate with application_status
 for(i in 1:nrow(gol2)){
-      if(is.na(gol2$AWARD_STATUS.1[i])){
-            gol2$AWARD_STATUS.1[i] <- gol2$APPLICATION_STATUS[i]
+      if(is.na(gol2$GRANT_STATUS[i])){
+            gol2$GRANT_STATUS[i] <- gol2$APPLICATION_STATUS[i]
       }
 }
 
@@ -266,6 +281,7 @@ gol3[ , which(names(merged) == "FY")] <- gol2$FY
 gol3[ , which(names(merged) == "CFDA..")] <- gol2$CFDA_NUMBER
 gol3[ , which(names(merged) == "Appropriation")] <- gol2$PROGRAM_OFFICE
 gol3[ , which(names(merged) == "Prog.Abbr")] <- gol2$PROGRAM_OFFICE
+gol3[ , which(names(merged) == "Status")] <- gol2$GRANT_STATUS
 gol3[ , which(names(merged) == "Control.")] <- gol2$APPLICATION_ID
 gol3[ , which(names(merged) == "Project.No.")] <- gol2$AWARD_NUMBER
 gol3[ , which(names(merged) == "Appl.Short.Name")] <- gol2$APPLICANT_NAME
@@ -278,7 +294,6 @@ gol3[ , which(names(merged) == "Economic.Impact.or.Benefit")] <- gol2$PROJECT_DE
 gol3[ , which(names(merged) == "PPR.Date")] <- gol2$RECEIVED_DT
 gol3[ , which(names(merged) == "DEC.Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
-gol3[ , which(names(merged) == "Status")] <- gol2$AWARD_STATUS.1
 gol3[ , which(names(merged) == "Appr.Desc")] <- gol2$RFA_NAME
 gol3[ , which(names(merged) == "Prog.Tool.Name")] <- gol2$RFA_NAME
 gol3[ , which(names(merged) == "Initiatives")] <- gol2$SPEC_INIT_CODES
@@ -306,6 +321,8 @@ gol3[ , which(names(merged) == "Proj.State.Cong")] <- gol2$Appl.State.Cong
 gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
 gol3[ , which(names(merged) == "DUNS..")] <- gol2$DUNS_NUMBER
+gol3[ , which(names(merged) == "MSI.Indicator")] <- gol2$MSI_CODE
+gol3[ , which(names(merged) == "Appr.Code")] <- gol2$APPROPRIATION_CODE
 
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
