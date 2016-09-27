@@ -1,5 +1,6 @@
 select("Project_Number" = Project.No., "Control_Number" = Control., Status, FY,  
        "Full_Applicant_Name" = Full.Applicant.Name, "Applicant_Short_Name" = Appl.Short.Name, 
+       "Coapp.Full.Applicant.Name" = Coapp.Full.Applicant.Name, "Coapp.Appl.Short.Name" = Coapp.Appl.Short.Name,
        "EDA_Funding" = Best.EDA..,
        "Total_Project_Cost" = Total.Project.., "Appropriation_Description" = Appr.Desc, 
        "Appropriation Code" = Appr.Code,
@@ -13,3 +14,14 @@ select("Project_Number" = Project.No., "Control_Number" = Control., Status, FY,
        "Applicant_State" = Appl.State.Abbr, "Applicant_ZIP" = Appl..Zip, "Appl_Cong_Dist" = Appl.Cong.Dist,
        "Project_City" = Proj.City.Name, "Project_County" = Proj.County.Name, 
        "Project_State" = Proj.ST.Abbr, "Project_ZIP" = Proj.ZIP, "Database" = database)
+
+# limited columns for shiny_data
+select(Control.No., FY, Status, Full.Applicant.Name, Appl.Short.Name, Coapp.Full.Applicant.Name, Coapp.Appl.Short.Name, EDA.Funding, Total.Proj.Cost, Program, 
+       Appr.Desc, Initiatives, Construction, General.Descr., Scope.of.Work, GNS.Descr., 
+       Economic.Impact.or.Benefit, Proj.State.Abbr, Proj.County.Name, Proj.ZIP, Proj.City.Name,
+       Appl.State.Abbr, Appl.County.Name, Appl.City.Name, Appl.ZIP, 
+       "Est.Jobs.Created" = Jobs.Created, "Est.Jobs.Saved" = Jobs.Saved, 
+       "Est.Private.Investment" = Private.Investment, Priv.Inv.at.3.years,
+       Jobs.Created.at.3.years, Jobs.Retained.at.3.years, Priv.Inv.at.6.years, 
+       Jobs.Created.at.6.years, Jobs.Retained.at.6.years, Priv.Inv.at.9.years, 
+       Jobs.Created.at.9.years, Jobs.Retained.at.9.years)

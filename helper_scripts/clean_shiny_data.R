@@ -15,7 +15,8 @@ options(scipen=999)
 master_data_filename <- list.files()[str_detect(list.files(), "master_data_20")]
 md <- read_csv(master_data_filename, col_types = list(DUNS.. = col_character(), Local.Applicant.. = col_number(), Total.Project.. = col_number(), Best.EDA.. = col_number(),
                                                       Private.Investment = col_number(), Control. = col_character(), Project.No. = col_character(), Proj.ZIP = col_character(),
-                                                      Appl..Zip = col_character(), Initiatives = col_character()))
+                                                      Appl..Zip = col_character(), Initiatives = col_character(), Coapp.Appl.ZIP.4 = col_character(), 
+                                                      Coapp.DUNS.. = col_character()))
 
 # read in archived shiny data with lat/long info
 setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
@@ -256,14 +257,15 @@ length(unique_dups)
 dups %>% select(app_coord, app_address) %>% data.frame(.) %>% head(., 50)
 
 for(i in 1:length(unique_dups)){
-        print(str_c("unique_dups is ", i))
+        print(str_c("unique_dups number is ", i))
         dup_i <- unique_dups[i]
-        print(dup_i)
+        print(str_c("unique_dups is ", dup_i))
         row_i <- which(shiny_jitter$app_coord == dup_i)
+        print(str_c("shiny_jitter$app_coord match row is ", row_i))
         shiny_jitter_dup_i <- shiny_jitter[row_i, ]
         direction_counter <- 1
         for(x in 1:nrow(shiny_jitter_dup_i)){
-                print(str_c("shiny_jitter_dup_i is ", x))
+                print(str_c("shiny_jitter_dup_i row is ", x))
                 print(str_c("direction_counter is ", direction_counter))
                 loop_multiplier <- ceiling(x / 4)
                 print(str_c("loop_multiplier is ", loop_multiplier))
@@ -271,6 +273,7 @@ for(i in 1:length(unique_dups)){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
                         print(str_c("existing coord is ", shiny_jitter_dup_i$app_lat[x]))
                         proposed_new_app_lat <- shiny_jitter_dup_i$app_lat[x] + .01*loop_multiplier
+                        # issue might be here, if it's overwriting proposed new app lat for all app_lat matches??
                         pre_existing_matches <- which(shiny_jitter$app_lat == proposed_new_app_lat)
                         while(length(pre_existing_matches) > 0) {
                                 print("there was a pre-existing match, jittering further")
@@ -281,7 +284,6 @@ for(i in 1:length(unique_dups)){
                                 print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$app_lat[shiny_jitter_row] <- proposed_new_app_lat
-                        # shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] + .01*loop_multiplier
                         print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
                         print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("app_lat + ", .01*loop_multiplier))
@@ -295,18 +297,17 @@ for(i in 1:length(unique_dups)){
                         while(length(pre_existing_matches) > 0) {
                                 print("there was a pre-existing match, jittering further")
                                 print(str_c("current proposed coord is ", proposed_new_app_lat))
-                                print(str_c("test of matching: ", which(shiny_jitter$app_lat == "15.157801")))
-                                print(str_c("test of matching length: ", length(which(shiny_jitter$app_lat == "15.157801"))))
+                                # print(str_c("test of matching: ", which(shiny_jitter$app_lat == "15.157801")))
+                                # print(str_c("test of matching length: ", length(which(shiny_jitter$app_lat == "15.157801"))))
                                 proposed_new_app_lat <- proposed_new_app_lat - .01
-                                print(str_c("test proposed_new_app_lat equals: ", proposed_new_app_lat))
-                                print(str_c("test of proposed_new_app_lat class: ", class(proposed_new_app_lat)))
+                                # print(str_c("test proposed_new_app_lat equals: ", proposed_new_app_lat))
+                                # print(str_c("test of proposed_new_app_lat class: ", class(proposed_new_app_lat)))
                                 pre_existing_matches <- which(shiny_jitter$app_lat == proposed_new_app_lat)
-                                print(str_c("test print of pre_existing_matches: ", pre_existing_matches))
+                                # print(str_c("test print of pre_existing_matches: ", pre_existing_matches))
                                 print(str_c("will try new proposed coord: ", proposed_new_app_lat))
                                 print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$app_lat[shiny_jitter_row] <- proposed_new_app_lat
-                        # shiny_jitter$app_lat[shiny_jitter_row] <- shiny_jitter_dup_i$app_lat[x] - .01*loop_multiplier
                         print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
                         print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("app_lat - ", .01*loop_multiplier))
@@ -326,7 +327,6 @@ for(i in 1:length(unique_dups)){
                                 print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$app_lon[shiny_jitter_row] <- proposed_new_app_lon
-                        # shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] + .01*loop_multiplier
                         print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
                         print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("app_lon + ", .01*loop_multiplier))
@@ -346,7 +346,6 @@ for(i in 1:length(unique_dups)){
                                 print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$app_lon[shiny_jitter_row] <- proposed_new_app_lon
-                        # shiny_jitter$app_lon[shiny_jitter_row] <- shiny_jitter_dup_i$app_lon[x] - .01*loop_multiplier
                         direction_counter <- 1
                         print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
                         print(str_c("shiny_jitter row is ", shiny_jitter_row))
@@ -365,7 +364,7 @@ sum(dup_logical)
 dup_index <- which(dup_logical == TRUE)
 dups <- shiny_jitter[dup_index, ]
 dim(dups)
-select(dups, Appl.Short.Name, app_address, app_lat, app_lon, app_coord) %>% arrange(app_address) %>% data.frame(.) %>% head(., 50)
+select(dups, Control., Appl.Short.Name, app_address, app_lat, app_lon, app_coord) %>% arrange(app_address) %>% data.frame(.) %>% head(., 50)
 
 # if still duplicate app_coords that should have jitterd, run lines below and jitter loop again (need to debug further)
 # dup_logical <- duplicated(app_coord)
@@ -392,36 +391,36 @@ length(unique_dups)
 dups %>% select(app_coord, app_address) %>% data.frame(.) %>% head(., 50)
 
 for(i in 1:length(unique_dups)){
-        print(str_c("unique_dups is ", i))
+        # print(str_c("unique_dups is ", i))
         dup_i <- unique_dups[i]
-        print(dup_i)
+        # print(dup_i)
         row_i <- which(shiny_jitter$proj_coord == dup_i)
         shiny_jitter_dup_i <- shiny_jitter[row_i, ]
         direction_counter <- 1
         for(x in 1:nrow(shiny_jitter_dup_i)){
-                print(str_c("shiny_jitter_dup_i is ", x))
-                print(str_c("direction_counter is ", direction_counter))
+                # print(str_c("shiny_jitter_dup_i is ", x))
+                # print(str_c("direction_counter is ", direction_counter))
                 loop_multiplier <- ceiling(x / 4)
-                print(str_c("loop_multiplier is ", loop_multiplier))
+                # print(str_c("loop_multiplier is ", loop_multiplier))
                 if(direction_counter == 1){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lat[x]))
+                        # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lat[x]))
                         proposed_new_proj_lat <- shiny_jitter_dup_i$proj_lat[x] + .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
                         while(length(pre_existing_matches) > 0) {
-                                print("there was a pre-existing match, jittering further")
-                                print(str_c("current proposed coord is ", proposed_new_proj_lat))
+                                # print("there was a pre-existing match, jittering further")
+                                # print(str_c("current proposed coord is ", proposed_new_proj_lat))
                                 proposed_new_proj_lat <- proposed_new_proj_lat + .01
                                 pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
-                                print(str_c("will try new proposed coord: ", proposed_new_proj_lat))
-                                print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
+                                # print(str_c("will try new proposed coord: ", proposed_new_proj_lat))
+                                # print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$proj_lat[shiny_jitter_row] <- proposed_new_proj_lat
                         # shiny_jitter$proj_lat[shiny_jitter_row] <- shiny_jitter_dup_i$proj_lat[x] + .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        # print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        # print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("proj_lat + ", .01*loop_multiplier))
-                        print(str_c("proj_lat is now ", proposed_new_proj_lat))
+                        # print(str_c("proj_lat is now ", proposed_new_proj_lat))
                 } 
                 if(direction_counter == 2){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
@@ -429,65 +428,65 @@ for(i in 1:length(unique_dups)){
                         proposed_new_proj_lat <- shiny_jitter_dup_i$proj_lat[x] - .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
                         while(length(pre_existing_matches) > 0) {
-                                print("there was a pre-existing match, jittering further")
-                                print(str_c("current proposed coord is ", proposed_new_proj_lat))
-                                print(str_c("test of matching: ", which(shiny_jitter$proj_lat == "15.157801")))
-                                print(str_c("test of matching length: ", length(which(shiny_jitter$proj_lat == "15.157801"))))
+                                # print("there was a pre-existing match, jittering further")
+                                # print(str_c("current proposed coord is ", proposed_new_proj_lat))
+                                # print(str_c("test of matching: ", which(shiny_jitter$proj_lat == "15.157801")))
+                                # print(str_c("test of matching length: ", length(which(shiny_jitter$proj_lat == "15.157801"))))
                                 proposed_new_proj_lat <- proposed_new_proj_lat - .01
-                                print(str_c("test proposed_new_proj_lat equals: ", proposed_new_proj_lat))
-                                print(str_c("test of proposed_new_proj_lat class: ", class(proposed_new_proj_lat)))
+                                # print(str_c("test proposed_new_proj_lat equals: ", proposed_new_proj_lat))
+                                # print(str_c("test of proposed_new_proj_lat class: ", class(proposed_new_proj_lat)))
                                 pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
-                                print(str_c("test print of pre_existing_matches: ", pre_existing_matches))
-                                print(str_c("will try new proposed coord: ", proposed_new_proj_lat))
-                                print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
+                                # print(str_c("test print of pre_existing_matches: ", pre_existing_matches))
+                                # print(str_c("will try new proposed coord: ", proposed_new_proj_lat))
+                                # print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$proj_lat[shiny_jitter_row] <- proposed_new_proj_lat
                         # shiny_jitter$proj_lat[shiny_jitter_row] <- shiny_jitter_dup_i$proj_lat[x] - .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        # print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        # print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("proj_lat - ", .01*loop_multiplier))
-                        print(str_c("proj_lat is now ", proposed_new_proj_lat))
+                        # print(str_c("proj_lat is now ", proposed_new_proj_lat))
                 } 
                 if(direction_counter == 3){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
+                        # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
                         proposed_new_proj_lon <- shiny_jitter_dup_i$proj_lon[x] + .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
                         while(length(pre_existing_matches) > 0) {
-                                print("there was a pre-existing match, jittering further")
-                                print(str_c("current proposed coord is ", proposed_new_proj_lon))
+                                # print("there was a pre-existing match, jittering further")
+                                # print(str_c("current proposed coord is ", proposed_new_proj_lon))
                                 proposed_new_proj_lon <- proposed_new_proj_lon + .01
                                 pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
-                                print(str_c("will try new proposed coord: ", proposed_new_proj_lon))
-                                print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
+                                # print(str_c("will try new proposed coord: ", proposed_new_proj_lon))
+                                # print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$proj_lon[shiny_jitter_row] <- proposed_new_proj_lon
                         # shiny_jitter$proj_lon[shiny_jitter_row] <- shiny_jitter_dup_i$proj_lon[x] + .01*loop_multiplier
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        # print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        # print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("proj_lon + ", .01*loop_multiplier))
-                        print(str_c("proj_lon is now ", proposed_new_proj_lon))
+                        # print(str_c("proj_lon is now ", proposed_new_proj_lon))
                 }
                 if(direction_counter == 4){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
+                        # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
                         proposed_new_proj_lon <- shiny_jitter_dup_i$proj_lon[x] - .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
                         while(length(pre_existing_matches) > 0) {
-                                print("there was a pre-existing match, jittering further")
-                                print(str_c("current proposed coord is ", proposed_new_proj_lon))
+                                # print("there was a pre-existing match, jittering further")
+                                # print(str_c("current proposed coord is ", proposed_new_proj_lon))
                                 proposed_new_proj_lon <- proposed_new_proj_lon - .01
                                 pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
-                                print(str_c("will try new proposed coord: ", proposed_new_proj_lon))
-                                print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
+                                # print(str_c("will try new proposed coord: ", proposed_new_proj_lon))
+                                # print(str_c("pre_existing_matches = ", length(pre_existing_matches)))
                         }
                         shiny_jitter$proj_lon[shiny_jitter_row] <- proposed_new_proj_lon
                         # shiny_jitter$proj_lon[shiny_jitter_row] <- shiny_jitter_dup_i$proj_lon[x] - .01*loop_multiplier
                         direction_counter <- 1
-                        print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
-                        print(str_c("shiny_jitter row is ", shiny_jitter_row))
+                        # print(str_c("Control. is ", shiny_jitter_dup_i$Control.[x]))
+                        # print(str_c("shiny_jitter row is ", shiny_jitter_row))
                         # print(str_c("proj_lon - ", .01*loop_multiplier))
-                        print(str_c("proj_lon is now ", proposed_new_proj_lon))
+                        # print(str_c("proj_lon is now ", proposed_new_proj_lon))
                 } else {direction_counter <- direction_counter + 1}
         }
 }

@@ -18,7 +18,7 @@ opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
 # read-in opcs data from impromptu
 opcs <- read.csv(opcs_filename, stringsAsFactors = FALSE, colClasses = c("Control." = "character",
                         "Project.No." = "character", "Proj.ZIP" = "character", "Appl..Zip" = "character",
-                        "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character", 
+                        "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character",
                         "Local.Applicant.." = "character", "Total.Project.." = "character", "Best.EDA.." = "character", "Private.Investment" = "character"))
 
 # pad leading zeroes back on zip codes 
