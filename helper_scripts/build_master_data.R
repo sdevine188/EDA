@@ -17,27 +17,11 @@ opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
 
 # read-in opcs data from impromptu
 opcs <- read.csv(opcs_filename, stringsAsFactors = FALSE, colClasses = c("Control." = "character",
-                        "Project.No." = "character", "Proj.ZIP" = "character", "Appl..Zip" = "character",
-                        "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character",
-                        "Local.Applicant.." = "character", "Total.Project.." = "character", "Best.EDA.." = "character", "Private.Investment" = "character"))
+                           "Project.No." = "character", "Proj.ZIP" = "character", "Appl..Zip" = "character",
+                           "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character", 
+                           "Local.Applicant.." = "character", "Total.Project.." = "character", "Best.EDA.." = "character", "Private.Investment" = "character"), na.strings = c("", "NA"))
 
-# pad leading zeroes back on zip codes 
 opcs2 <- opcs
-opcs2$Appl..Zip <- str_pad(opcs2$Appl..Zip, width = 5, side = "left", pad = "0")
-opcs2$Proj.ZIP <- str_pad(opcs2$Proj.ZIP, width = 5, side = "left", pad = "0")
-
-# convert dates to usable date format
-opcs2$PCL.Date <- ymd_hm(opcs2$PCL.Date, tz = "EST")
-opcs2$DEC.Date <- ymd_hm(opcs2$DEC.Date, tz = "EST")
-opcs2$PPR.Date <- ymd_hm(opcs2$PPR.Date, tz = "EST")
-opcs2$PRD.Date <- ymd_hm(opcs2$PRD.Date, tz = "EST")
-opcs2$GSD.Date <- ymd_hm(opcs2$GSD.Date, tz = "EST")
-opcs2$GPE.Date <- ymd_hm(opcs2$GPE.Date, tz = "EST")
-opcs2$GPE.Date <- ymd_hm(opcs2$GPX.Date, tz = "EST")
-
-# change blanks for Cons.Non to NA
-blank_index <- which(opcs2$Cons.Non == "")
-opcs2$Cons.Non[blank_index] <- NA
 
 # pad Appl.FIPS.ST and Appl.Cong.Dist, and create Appl.State.Cong variable as unique congressional district identifier 
 opcs2$Appl.FIPS.ST <- str_pad(opcs2$Appl.FIPS.ST, width = 2, side = "left", pad = "0")
@@ -49,40 +33,128 @@ opcs2$Proj.FIPS.ST <- str_pad(opcs2$Proj.FIPS.ST, width = 2, side = "left", pad 
 opcs2$Proj.Cong.Dist <- str_pad(opcs2$Proj.Cong.Dist, width = 2, side = "left", pad = "0")
 opcs2$Proj.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
 
-# remove any duplicates
-dup <- (duplicated(opcs2$Control.))
-dup_index <- which(dup == TRUE)
-non_dup_index <- which(dup == FALSE)
-opcs3 <- opcs2[non_dup_index, ]
+# pad DUNS with zeroes
+errors_index <- which(nchar(opcs2$DUNS..) < 9 & nchar(opcs2$DUNS..) > 0)
+opcs2$DUNS..[errors_index] <- str_pad(opcs2$DUNS..[errors_index], width = 9, side = "right", pad = "0")
 
-# pad DUNS with zeroes and convert blanks to NA
-errors_index <- which(nchar(opcs3$DUNS..) < 9 & nchar(opcs3$DUNS..) > 0)
-opcs3$DUNS..[errors_index] <- str_pad(opcs3$DUNS..[errors_index], width = 9, side = "right", pad = "0")
-for(i in 1:nrow(opcs3)) {
-        if(opcs3$DUNS..[i] == "") {
-                opcs3$DUNS..[i] <- NA
-        }
-}
+# pad leading zeroes back on zip codes
+opcs2$Appl..Zip <- str_pad(opcs2$Appl..Zip, width = 5, side = "left", pad = "0")
+opcs2$Proj.ZIP <- str_pad(opcs2$Proj.ZIP, width = 5, side = "left", pad = "0")
+opcs2$Appl.ZIP.4 <- str_pad(opcs2$Appl.ZIP.4, width = 4, side = "left", pad = "0")
 
 # convert MSI.Indicator code into acronym
-opcs3$MSI.Indicator <- as.character(opcs3$MSI.Indicator)
-for(i in 1:nrow(opcs3)) {
-        if(opcs3$MSI.Indicator[i] == "1" & !is.na(opcs3$MSI.Indicator[i])) {
-                opcs3$MSI.Indicator[i] <- "HBCU"
+opcs2$MSI.Indicator <- as.character(opcs2$MSI.Indicator)
+for(i in 1:nrow(opcs2)) {
+        if(opcs2$MSI.Indicator[i] == "1" & !is.na(opcs2$MSI.Indicator[i])) {
+                opcs2$MSI.Indicator[i] <- "HBCU"
         }
-        if(opcs3$MSI.Indicator[i] == "2" & !is.na(opcs3$MSI.Indicator[i])) {
-                opcs3$MSI.Indicator[i] <- "HSI"
+        if(opcs2$MSI.Indicator[i] == "2" & !is.na(opcs2$MSI.Indicator[i])) {
+                opcs2$MSI.Indicator[i] <- "HSI"
         }
-        if(opcs3$MSI.Indicator[i] == "3" & !is.na(opcs3$MSI.Indicator[i])) {
-                opcs3$MSI.Indicator[i] <- "TCU"
+        if(opcs2$MSI.Indicator[i] == "3" & !is.na(opcs2$MSI.Indicator[i])) {
+                opcs2$MSI.Indicator[i] <- "TCU"
         }
-        if(opcs3$MSI.Indicator[i] == "4" & !is.na(opcs3$MSI.Indicator[i])) {
-                opcs3$MSI.Indicator[i] <- "Other"
+        if(opcs2$MSI.Indicator[i] == "4" & !is.na(opcs2$MSI.Indicator[i])) {
+                opcs2$MSI.Indicator[i] <- "Other"
         }
-        if(opcs3$MSI.Indicator[i] == "5" & !is.na(opcs3$MSI.Indicator[i])) {
-                opcs3$MSI.Indicator[i] <- "AKHIPPI"
+        if(opcs2$MSI.Indicator[i] == "5" & !is.na(opcs2$MSI.Indicator[i])) {
+                opcs2$MSI.Indicator[i] <- "AKHIPPI"
         }
 }
+
+# create id variable and get distinct id
+opcs2 <- opcs2 %>% mutate(id = str_c(str_replace_na(opcs2$Control.), str_replace_na(opcs2$Appl.Short.Name), sep = "_")) %>%
+        distinct(id, .keep_all = TRUE)
+row_id <- data.frame(row_id = seq_along(1:nrow(opcs2)))
+opcs2 <- bind_cols(row_id, opcs2)
+
+# flag coapplicants
+dup_control_index <- duplicated(opcs2$Control.)
+dup_control_numbers <- opcs2$Control.[dup_control_index]
+total_dup_records <- opcs2 %>% filter(Control. %in% dup_control_numbers)
+# create value for test to confirm no control numbers being dropped with filter for comp.code = 1, appl.lead = y, and is.na(appl.short.name)
+total_dup_count <- length(unique(total_dup_records$Control.))
+# filter total_dup_records 
+dup_lead_app_records <- total_dup_records %>% filter(Comp.Code == "1" & Appl.Lead..Y.N. == "Y") %>% filter(!is.na(Appl.Short.Name))
+# manually add lead applicant records for any found via inspection that don't have both comp.code = 1 and appl.lead = Y due to data entry errors
+manual_lead <- opcs2 %>% filter(Control. == 59398 & Appl.Short.Name == "Los Angeles, City of" | 
+                                        Control. == 59399 & Appl.Short.Name == "Cdc of Los Angeles" | Control. == 96739 & Appl.Short.Name == "West TX A&M Univ")
+dup_lead_app_records <- bind_rows(dup_lead_app_records, manual_lead)
+# run test to confim no untracked duplicates requiring manual handling
+lead_app_count <- length(unique(dup_lead_app_records$Control.))
+if(total_dup_count == lead_app_count) {
+        print("good: no untracked duplicates")
+} else {
+        stop("untracked duplicates detected: total_dup_count is greater than dup_control_count, so some records must be manually handled")
+}
+# flag coapplicant records
+opcs2$coapp <- NA
+coapp_records <- opcs2 %>% filter(Control. %in% dup_lead_app_records$Control., !(row_id %in% dup_lead_app_records$row_id))
+coapp_rows <- coapp_records$row_id
+opcs2[ , "coapp"][coapp_rows] <- 1
+
+# create function to produce coapplicant variable and assign it as compiled string in lead applicant record
+create_coapp_var <- function(var) {
+        var_name <- str_c("Coapp.", var)
+        opcs2[ , var_name] <- NA
+        dup_control_index <- duplicated(opcs2$Control.)
+        dup_control_numbers <- opcs2$Control.[dup_control_index]
+        dup_lead_app_records <- opcs2 %>% filter(Control. %in% dup_control_numbers, is.na(coapp))
+
+        for(i in 1:nrow(dup_lead_app_records)) {
+                # compile coapplicant variable into string and assign to lead applicant record
+                coapp_records <- opcs2 %>% filter(Control. == dup_control$Control.[i], row_id != dup_control$row_id[i])
+                coapp_var <- coapp_records %>% select_(.dots = lazyeval::interp(var))
+                coapp_var_list <- sapply(coapp_var[ , lazyeval::interp(var)], function(x) { x })
+                coapp_var_str <- str_c(coapp_var_list, collapse = ";; ")
+                lead_app_row <- which(opcs2$row_id == dup_control$row_id[i])
+                opcs2[ , var_name][lead_app_row] <- coapp_var_str
+        }
+        
+        opcs2
+}
+
+# create coapp variables
+opcs2 <- create_coapp_var("Appl.Short.Name")
+opcs2 <- create_coapp_var("Full.Applicant.Name")
+opcs2 <- create_coapp_var("Appl.Street.Addr.1")
+opcs2 <- create_coapp_var("Appl.Street.Addr.2")
+opcs2 <- create_coapp_var("Appl.City.Name")
+opcs2 <- create_coapp_var("Appl.FIPS.City")
+opcs2 <- create_coapp_var("Appl.Cnty.Name")
+opcs2 <- create_coapp_var("Appl.FIPS.Cnty")
+opcs2 <- create_coapp_var("Appl.State.Abbr")
+opcs2 <- create_coapp_var("Appl.FIPS.ST")
+opcs2 <- create_coapp_var("Appl..Zip")
+opcs2 <- create_coapp_var("Appl.ZIP.4")
+opcs2 <- create_coapp_var("Appl.Type.Name")
+opcs2 <- create_coapp_var("Appl.Type.Code")
+opcs2 <- create_coapp_var("Appl.Contact.Name")
+opcs2 <- create_coapp_var("Appl.Contact.Title")
+opcs2 <- create_coapp_var("Appl.Cont.Phone")
+opcs2 <- create_coapp_var("Entity.Code")
+opcs2 <- create_coapp_var("MSI.Indicator")
+opcs2 <- create_coapp_var("Minority.Status")
+opcs2 <- create_coapp_var("DUNS..")
+opcs2 <- create_coapp_var("IRS..")
+
+# find and delete coapplicant records
+opcs3 <- opcs2 %>% filter(is.na(coapp))
+
+# convert dates to usable date format
+opcs3$PCL.Date <- ymd_hm(opcs3$PCL.Date, tz = "EST")
+opcs3$DEC.Date <- ymd_hm(opcs3$DEC.Date, tz = "EST")
+opcs3$PPR.Date <- ymd_hm(opcs3$PPR.Date, tz = "EST")
+opcs3$PRD.Date <- ymd_hm(opcs3$PRD.Date, tz = "EST")
+opcs3$GSD.Date <- ymd_hm(opcs3$GSD.Date, tz = "EST")
+opcs3$GPE.Date <- ymd_hm(opcs3$GPE.Date, tz = "EST")
+opcs3$GPE.Date <- ymd_hm(opcs3$GPX.Date, tz = "EST")
+opcs3$Report.Date.3.years <- ymd_hm(opcs3$Report.Date.3.years, tz = "EST")
+opcs3$Report.Date.6.years <- ymd_hm(opcs3$Report.Date.6.years, tz = "EST")
+opcs3$Report.Date.9.years <- ymd_hm(opcs3$Report.Date.9.years, tz = "EST")
+
+
+
 
 ## read in and clean oit data
 
@@ -122,10 +194,7 @@ merged <- left_join(opcs3, oit4, by = c("Control." = "CONTROL_NO"))
 # add database variable indicating what database data came from (opcs vs gol)
 merged$database <- "opcs"
 
-# correct column classes for merged
-merged$Report.Date.3.years <- ymd_hm(merged$Report.Date.3.years, tz = "EST")
-merged$Report.Date.6.years <- ymd_hm(merged$Report.Date.6.years, tz = "EST")
-merged$Report.Date.9.years <- ymd_hm(merged$Report.Date.9.years, tz = "EST")
+
 
 ## read in grants online data
 
@@ -323,6 +392,16 @@ gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
 gol3[ , which(names(merged) == "DUNS..")] <- gol2$DUNS_NUMBER
 gol3[ , which(names(merged) == "MSI.Indicator")] <- gol2$MSI_CODE
 gol3[ , which(names(merged) == "Appr.Code")] <- gol2$APPROPRIATION_CODE
+gol3[ , which(names(merged) == "IRS..")] <- gol2$EIN_NUMBER
+gol3[ , which(names(merged) == "Appl.FIPS.City")] <- gol2$FIPS_CITY_CD
+gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$FIPS_COUNTY_CD
+gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$FIPS_STATE_CD
+# gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$PRIMARY_NAICS
+# gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$GLOBAL_PARENT_DUNS_NUMBER
+
+
+
+
 
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
 gol3[ , which(names(merged) == "Best.EDA..")] <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$AWARD_FED_SHARE[row])) {gol2$APP_FED_SHARE[row]} else 
