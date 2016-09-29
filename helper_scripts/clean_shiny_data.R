@@ -16,7 +16,7 @@ master_data_filename <- list.files()[str_detect(list.files(), "master_data_20")]
 md <- read_csv(master_data_filename, col_types = list(DUNS.. = col_character(), Local.Applicant.. = col_number(), Total.Project.. = col_number(), Best.EDA.. = col_number(),
                                                       Private.Investment = col_number(), Control. = col_character(), Project.No. = col_character(), Proj.ZIP = col_character(),
                                                       Appl..Zip = col_character(), Initiatives = col_character(), Coapp.Appl.ZIP.4 = col_character(), 
-                                                      Coapp.DUNS.. = col_character()))
+                                                      Coapp.DUNS.. = col_character(), IRS.. = col_character()))
 
 # read in archived shiny data with lat/long info
 setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
@@ -514,7 +514,8 @@ shiny_app_data <- rename(shiny_app_data, "Control.No." = Control., "EDA.Funding"
        # "PPR.Code" = PPR.Act, "DEC.Code" = DEC.Act, "GPE.Date" = X.GPE._Date, "GSD.Date" = X.GSD._Date,
        # "PRD.Code" = X.PRD._Action.Code, "PRD.Date" = X.PRD._Date, "PCL.Date" = X.PCL._Date, 
        "PPS.Date" = X.PPS._Date, "PPE.Date" = X.PPE._Date, "PX1.Date" = X.PX1._Date, 
-       "PX2.Date" = X.PX2._Date, "Local.Applicant.Match" = Local.Applicant..)
+       "PX2.Date" = X.PX2._Date, "Local.Applicant.Match" = Local.Applicant.., "Coapp.DUNS" = Coapp.DUNS.., "Coapp.IRS" = Coapp.IRS.., 
+       "Coapp.Appl.ZIP" = Coapp.Appl..Zip)
 
 
 

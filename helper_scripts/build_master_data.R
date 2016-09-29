@@ -18,7 +18,7 @@ opcs_filename <- list.files()[str_detect(list.files(), "opcs_20")]
 # read-in opcs data from impromptu
 opcs <- read.csv(opcs_filename, stringsAsFactors = FALSE, colClasses = c("Control." = "character",
                            "Project.No." = "character", "Proj.ZIP" = "character", "Appl..Zip" = "character",
-                           "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character", 
+                           "Initiatives" = "character", "Appl.Contact.Name" = "character", "Contact.Email" = "character", "DUNS.." = "character", "IRS.." = "character",
                            "Local.Applicant.." = "character", "Total.Project.." = "character", "Best.EDA.." = "character", "Private.Investment" = "character"), na.strings = c("", "NA"))
 
 opcs2 <- opcs
@@ -92,6 +92,14 @@ opcs2$coapp <- NA
 coapp_records <- opcs2 %>% filter(Control. %in% dup_lead_app_records$Control., !(row_id %in% dup_lead_app_records$row_id))
 coapp_rows <- coapp_records$row_id
 opcs2[ , "coapp"][coapp_rows] <- 1
+# test to confirm records flagged by row_id order are the originally identified dups
+coapp_flag <- opcs2 %>% filter(coapp == 1)
+if(sum(coapp_flag$Control. %in% dup_control_numbers) != nrow(coapp_flag)) {
+        stop("Some flagged coapplicants have control numbers not in the originally identified duplicates")
+} else {
+        print("Good: coapplicants flagged correctly")
+}
+
 
 # create function to produce coapplicant variable and assign it as compiled string in lead applicant record
 create_coapp_var <- function(var) {
@@ -103,11 +111,11 @@ create_coapp_var <- function(var) {
 
         for(i in 1:nrow(dup_lead_app_records)) {
                 # compile coapplicant variable into string and assign to lead applicant record
-                coapp_records <- opcs2 %>% filter(Control. == dup_control$Control.[i], row_id != dup_control$row_id[i])
+                coapp_records <- opcs2 %>% filter(Control. == dup_lead_app_records$Control.[i], row_id != dup_lead_app_records$row_id[i])
                 coapp_var <- coapp_records %>% select_(.dots = lazyeval::interp(var))
                 coapp_var_list <- sapply(coapp_var[ , lazyeval::interp(var)], function(x) { x })
                 coapp_var_str <- str_c(coapp_var_list, collapse = ";; ")
-                lead_app_row <- which(opcs2$row_id == dup_control$row_id[i])
+                lead_app_row <- which(opcs2$row_id == dup_lead_app_records$row_id[i])
                 opcs2[ , var_name][lead_app_row] <- coapp_var_str
         }
         
@@ -210,7 +218,8 @@ gol <- read_csv(gol_filename, col_types = list(AWARD_NUMBER = col_character(), A
 gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, GRANT_STATUS, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
-               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE)
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE,
+               EIN_NUMBER, FIPS_CITY_CD, FIPS_COUNTY_CD, FIPS_STATE_CD)
 
 # correct DUNS that have four trailing zeroes
 duns_errors <- which(nchar(gol2$DUNS_NUMBER) == 13)
