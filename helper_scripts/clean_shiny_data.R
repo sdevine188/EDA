@@ -24,7 +24,8 @@ setwd("G:/PNP/Performance Measurement/rshinyapp/grants/data")
 shiny_data_filename <- list.files()[str_detect(list.files(), "shiny_app_data_20")]
 shiny_app_data <- read_csv(shiny_data_filename, col_types = list(DUNS = col_character(), Local.Applicant.Match = col_number(), Total.Proj.Cost = col_number(), EDA.Funding = col_number(),
                                                                  Private.Investment = col_number(), Control.No. = col_character(), Project.No. = col_character(), Proj.ZIP = col_character(),
-                                                                 Appl.ZIP = col_character(), Initiatives = col_character()))
+                                                                 Appl.ZIP = col_character(), Initiatives = col_character(), Coapp.Appl.ZIP.4 = col_character(), IRS = col_character(),
+                                                                 Coapp.DUNS = col_character(), Coapp.IRS = col_character()))
 shiny_app_data <- select(shiny_app_data, Control.No., app_address, app_lat, app_lon, proj_address, proj_lat, proj_lon)
 
 ## merge existing shiny data with latest master_data 
@@ -225,11 +226,24 @@ for(i in 1:nrow(need_proj_address)){
         need_proj_address$proj_lat[i] <- coordinates[2]
 }
 
+# correct any known geocode errors - some are bing map errors, others are ugly addresses
+setwd("G:/PNP/Performance Measurement/rshinyapp/clean_shiny_data")
+recode <- data.frame(read_csv("re-geocode_proj_errors.csv"))
+
+# loop through list re-geocoding
+for(i in 1:nrow(recode)) {
+        error_address <- recode$error_address[i]
+        error_row <- which(need_proj_address$proj_address == error_address)
+        print(error_row)
+        need_proj_address$proj_lat[error_row] <- recode$proj_lat[i]
+        need_proj_address$proj_lon[error_row] <- recode$proj_lon[i]
+}
+
 # see how many of the NA's google was not able to map
 sum(is.na(need_proj_address$proj_lat))
 
-# re-combine the existing master_data with the newly mapped and jittered applications
-shiny_app_data_minus <- filter(shiny_app_data, !is.na(proj_lat))
+# re-combine the existing master_data with the newly mapped applications
+shiny_app_data_minus <- filter(shiny_app_data, !is.na(proj_address))
 shiny_app_data <- rbind(shiny_app_data_minus, need_proj_address)
 
 # check to make sure all shiny_app_data records have app_address, app_lat, app_lon
@@ -385,13 +399,13 @@ dup_index <- which(dup_logical == TRUE)
 shiny_jitter <- shiny_app_data
 shiny_jitter$proj_coord <- proj_coord
 dups <- shiny_jitter[dup_index, ]
-dups <- shiny_jitter[dup_logical, ]
+# dups <- shiny_jitter[dup_logical, ]
 unique_dups <- unique(dups$proj_coord)
 length(unique_dups)
-dups %>% select(app_coord, app_address) %>% data.frame(.) %>% head(., 50)
+# dups %>% select(proj_coord, proj_address) %>% data.frame(.) %>% head(., 50)
 
 for(i in 1:length(unique_dups)){
-        # print(str_c("unique_dups is ", i))
+        print(str_c("unique_dups is ", i))
         dup_i <- unique_dups[i]
         # print(dup_i)
         row_i <- which(shiny_jitter$proj_coord == dup_i)
@@ -405,7 +419,8 @@ for(i in 1:length(unique_dups)){
                 if(direction_counter == 1){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
                         # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lat[x]))
-                        proposed_new_proj_lat <- shiny_jitter_dup_i$proj_lat[x] + .01*loop_multiplier
+                        # print(as.numeric(shiny_jitter_dup_i$proj_lat[x]) + .01*loop_multiplier)
+                        proposed_new_proj_lat <- as.numeric(shiny_jitter_dup_i$proj_lat[x]) + .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
                         while(length(pre_existing_matches) > 0) {
                                 # print("there was a pre-existing match, jittering further")
@@ -424,8 +439,8 @@ for(i in 1:length(unique_dups)){
                 } 
                 if(direction_counter == 2){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
-                        print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lat[x]))
-                        proposed_new_proj_lat <- shiny_jitter_dup_i$proj_lat[x] - .01*loop_multiplier
+                        # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lat[x]))
+                        proposed_new_proj_lat <- as.numeric(shiny_jitter_dup_i$proj_lat[x]) - .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lat == proposed_new_proj_lat)
                         while(length(pre_existing_matches) > 0) {
                                 # print("there was a pre-existing match, jittering further")
@@ -450,7 +465,7 @@ for(i in 1:length(unique_dups)){
                 if(direction_counter == 3){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
                         # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
-                        proposed_new_proj_lon <- shiny_jitter_dup_i$proj_lon[x] + .01*loop_multiplier
+                        proposed_new_proj_lon <- as.numeric(shiny_jitter_dup_i$proj_lon[x]) + .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
                         while(length(pre_existing_matches) > 0) {
                                 # print("there was a pre-existing match, jittering further")
@@ -470,7 +485,7 @@ for(i in 1:length(unique_dups)){
                 if(direction_counter == 4){
                         shiny_jitter_row <- which(shiny_jitter$Control. == shiny_jitter_dup_i$Control.[x])
                         # print(str_c("existing coord is ", shiny_jitter_dup_i$proj_lon[x]))
-                        proposed_new_proj_lon <- shiny_jitter_dup_i$proj_lon[x] - .01*loop_multiplier
+                        proposed_new_proj_lon <- as.numeric(shiny_jitter_dup_i$proj_lon[x]) - .01*loop_multiplier
                         pre_existing_matches <- which(shiny_jitter$proj_lon == proposed_new_proj_lon)
                         while(length(pre_existing_matches) > 0) {
                                 # print("there was a pre-existing match, jittering further")
