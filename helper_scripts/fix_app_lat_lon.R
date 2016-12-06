@@ -36,3 +36,11 @@ for(i in 1:nrow(recode)) {
         shiny_app_data$app_lat[error_row] <- recode$app_lat[i]
         shiny_app_data$app_lon[error_row] <- recode$app_lon[i]
 }
+
+
+
+
+
+
+
+
