@@ -5,6 +5,7 @@ keyword_string <- "setosa|versicolor"
 find_keyword_matches <- function(dataframe, keyword_string, keep_columns = c("Control.No.")){
         keyword_matches <- data.frame(matrix(nrow = nrow(dataframe), ncol = ncol(dataframe)))
         names(keyword_matches) <- names(dataframe)
+        drop_columns <- c()
         for(col in 1:ncol(dataframe)){
                 column_values <- c()
                 if(names(dataframe)[col] %in% keep_columns) {
@@ -17,12 +18,16 @@ find_keyword_matches <- function(dataframe, keyword_string, keep_columns = c("Co
                                 if(grepl(keyword_string, dataframe[row, col], ignore.case = TRUE)){
                                         column_values <- c(column_values, as.character(dataframe[row, col]))
                                 } else {
-                                        column_values <- c(column_values, NA)
-                                }   
+                                        column_values <- c(column_values, as.character(""))
+                                }
+                        }
+                        if(length(which(column_values == "")) == nrow(dataframe)) {
+                                drop_columns <- c(drop_columns, col)
                         }
                         keyword_matches[ , col] <- column_values
                 }
         }
+        keyword_matches <- keyword_matches[ , -drop_columns]
         return(keyword_matches)
 }
 
