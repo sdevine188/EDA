@@ -2,6 +2,7 @@ library(stringr)
 library(dplyr)
 library(lubridate)
 library(readr)
+library(lazyeval)
 
 # set working directory where files are saved
 setwd("G:/PNP/Performance Measurement/master_data")
@@ -91,7 +92,10 @@ if(total_dup_count == lead_app_count) {
 opcs2$coapp <- NA
 coapp_records <- opcs2 %>% filter(Control. %in% dup_lead_app_records$Control., !(row_id %in% dup_lead_app_records$row_id))
 coapp_rows <- coapp_records$row_id
-opcs2[ , "coapp"][coapp_rows] <- 1
+# opcs2[ , "coapp"][coapp_rows] <- 1
+coapp_col <- opcs2$coapp
+coapp_col[coapp_rows] <- 1
+opcs2$coapp <- coapp_col
 # test to confirm records flagged by row_id order are the originally identified dups
 coapp_flag <- opcs2 %>% filter(coapp == 1)
 if(sum(coapp_flag$Control. %in% dup_control_numbers) != nrow(coapp_flag)) {
@@ -108,7 +112,7 @@ create_coapp_var <- function(var) {
         dup_control_index <- duplicated(opcs2$Control.)
         dup_control_numbers <- opcs2$Control.[dup_control_index]
         dup_lead_app_records <- opcs2 %>% filter(Control. %in% dup_control_numbers, is.na(coapp))
-
+        
         for(i in 1:nrow(dup_lead_app_records)) {
                 # compile coapplicant variable into string and assign to lead applicant record
                 coapp_records <- opcs2 %>% filter(Control. == dup_lead_app_records$Control.[i], row_id != dup_lead_app_records$row_id[i])
@@ -218,8 +222,10 @@ gol <- read_csv(gol_filename, col_types = list(AWARD_NUMBER = col_character(), A
 gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, GRANT_STATUS, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
-               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, AUTH_REP_EMAIL, CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE,
-               EIN_NUMBER, FIPS_CITY_CD, FIPS_COUNTY_CD, FIPS_STATE_CD)
+               ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, APPLICATION_CONTACT, CONTACT_PHONE, CONTACT_EMAIL,
+               CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE, ASSIGNED_FPO,
+               EIN_NUMBER, FIPS_CITY_CD, FIPS_COUNTY_CD, FIPS_STATE_CD, PROJECT_START_DT, PROJECT_END_DT, AWARD_START_DT, AWARD_END_DT,
+               FIRST_FALD_DT)
 
 # correct DUNS that have four trailing zeroes
 duns_errors <- which(nchar(gol2$DUNS_NUMBER) == 13)
@@ -230,14 +236,14 @@ if(length(duns_errors) == length(which(str_sub(gol2$DUNS_NUMBER[duns_errors], st
 
 # if grant_status is NA, interpolate with application_status
 for(i in 1:nrow(gol2)){
-      if(is.na(gol2$GRANT_STATUS[i])){
-            gol2$GRANT_STATUS[i] <- gol2$APPLICATION_STATUS[i]
-      }
+        if(is.na(gol2$GRANT_STATUS[i])){
+                gol2$GRANT_STATUS[i] <- gol2$APPLICATION_STATUS[i]
+        }
 }
 
 # compute FY, use GO_SIGN_DT if available, otherwise use RECEIVED_DT, will subset year in code below
 gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {gol2$RECEIVED_DT[row]} else 
-        {gol2$GO_SIGN_DT[row]})
+{gol2$GO_SIGN_DT[row]})
 
 # convert gol dates to proper format
 gol2$FY <- mdy_hm(gol2$FY)
@@ -247,11 +253,14 @@ gol2$FY <- year(gol2$FY)
 # https://www.huduser.gov/portal/datasets/usps_crosswalk.html
 
 # add state and county fips
+# note fips are imputed from appl.zip code for those records without a FIPS_STATE_CD or FIPS_COUNTY_CD listed already
 zip_county_filename <- list.files()[str_detect(list.files(), "ZIP_COUNTY_")]
 zip_county <- read_csv(zip_county_filename)
 gol2$Appl.ZIP.4 <- str_sub(gol2$APPLICANT_ZIP, -4)
 gol2$APPLICANT_ZIP <- str_sub(gol2$APPLICANT_ZIP, 1, 5)
 gol2$app_fips_state_county <- NA
+# note there are about 15 records with zip that is not in hud list, though 3 are NA
+# gol2$APPLICANT_ZIP[which(!(gol2$APPLICANT_ZIP %in% zip_county$ZIP))]
 for(i in 1:nrow(gol2)){
         if(!(is.na(gol2$APPLICANT_ZIP[i]))){
                 if(gol2$APPLICANT_ZIP[i] %in% zip_county$ZIP){
@@ -265,6 +274,16 @@ for(i in 1:nrow(gol2)){
 gol2$app_fips_state_county <- str_pad(gol2$app_fips_state_county, width = 5, side = "left", pad = "0")
 gol2$Appl.FIPS.State <- str_sub(gol2$app_fips_state_county, 1, 2)
 gol2$Appl.FIPS.County <- str_sub(gol2$app_fips_state_county, 3, 5)
+
+# overwrite with FIPS_STATE_CD or FIPS_COUNTY_CD if available
+for(i in 1:nrow(gol2)) {
+        if(!(is.na(gol2$FIPS_STATE_CD[i]))) {
+                gol2$Appl.FIPS.State[i] <- gol2$FIPS_STATE_CD[i]
+        }
+        if(!(is.na(gol2$FIPS_COUNTY_CD[i]))) {
+                gol2$Appl.FIPS.County[i] <- gol2$FIPS_COUNTY_CD[i]
+        }
+}
 
 # add county names
 # using 2010 counties & fips from census https://www.census.gov/geo/reference/codes/cou.html
@@ -282,13 +301,13 @@ for(i in 1:nrow(gol2)){
                 if(gol2$app_fips_state_county[i] %in% counties$fips_state_county) {
                         # print(i)
                         # print(gol2$app_fips_state_county[i])
-                       county_match_index <- which(counties$fips_state_county == gol2$app_fips_state_county[i])
-                       county_name <- str_replace(counties$county[county_match_index], " County", "")
-                       county_name <- str_replace(county_name, " Parish", "")
-                       county_name <- str_replace(county_name, " Municipality", "")
-                       county_name <- str_replace(county_name, " Borough", "")
-                       county_name <- str_replace(county_name, " Municipio", "")
-                       gol2$Appl.Cnty.Name[i] <- county_name
+                        county_match_index <- which(counties$fips_state_county == gol2$app_fips_state_county[i])
+                        county_name <- str_replace(counties$county[county_match_index], " County", "")
+                        county_name <- str_replace(county_name, " Parish", "")
+                        county_name <- str_replace(county_name, " Municipality", "")
+                        county_name <- str_replace(county_name, " Borough", "")
+                        county_name <- str_replace(county_name, " Municipio", "")
+                        gol2$Appl.Cnty.Name[i] <- county_name
                 }
         }
 }
@@ -396,20 +415,23 @@ gol3[ , which(names(merged) == "Proj.FIPS.Cnty")] <- gol2$Appl.FIPS.County
 gol3[ , which(names(merged) == "Proj.County.Name")] <- gol2$Appl.Cnty.Name 
 gol3[ , which(names(merged) == "Proj.Cong.Dist")] <- gol2$Appl.Cong.Dist
 gol3[ , which(names(merged) == "Proj.State.Cong")] <- gol2$Appl.State.Cong
-gol3[ , which(names(merged) == "Contact.Email")] <- gol2$AUTH_REP_EMAIL
+gol3[ , which(names(merged) == "Contact.Email")] <- gol2$CONTACT_EMAIL
+gol3[ , which(names(merged) == "Appl.Cont.Phone")] <- gol2$CONTACT_PHONE
+gol3[ , which(names(merged) == "Appl.Contact.Name")] <- gol2$APPLICATION_CONTACT
 gol3[ , which(names(merged) == "Region.Name")] <- gol2$Region.Name
 gol3[ , which(names(merged) == "DUNS..")] <- gol2$DUNS_NUMBER
 gol3[ , which(names(merged) == "MSI.Indicator")] <- gol2$MSI_CODE
 gol3[ , which(names(merged) == "Appr.Code")] <- gol2$APPROPRIATION_CODE
 gol3[ , which(names(merged) == "IRS..")] <- gol2$EIN_NUMBER
 gol3[ , which(names(merged) == "Appl.FIPS.City")] <- gol2$FIPS_CITY_CD
-gol3[ , which(names(merged) == "Appl.FIPS.Cnty")] <- gol2$FIPS_COUNTY_CD
-gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$FIPS_STATE_CD
 # gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$PRIMARY_NAICS
 # gol3[ , which(names(merged) == "Appl.FIPS.ST")] <- gol2$GLOBAL_PARENT_DUNS_NUMBER
-
-
-
+gol3[ , which(names(merged) == "X.PPS._Date")] <- gol2$PROJECT_START_DT
+gol3[ , which(names(merged) == "X.PPE._Date")] <- gol2$PROJECT_END_DT
+gol3[ , which(names(merged) == "GSD.Date")] <- gol2$AWARD_START_DT
+gol3[ , which(names(merged) == "GPE.Date")] <- gol2$AWARD_END_DT
+gol3[ , which(names(merged) == "PRD.Date")] <- gol2$FIRST_FALD_DT
+gol3[ , which(names(merged) == "EDA.Official.Name")] <- gol2$ASSIGNED_FPO
 
 
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
@@ -425,6 +447,7 @@ names(gol3) <- names(merged)
 # check for duplicates
 dup <- duplicated(gol3$Control.)
 dup_index <- which(dup == TRUE)
+print(str_c("there were ", length(dup_index), " duplicates removed"))
 non_dup_index <- which(dup == FALSE)
 gol3 <- gol3[non_dup_index, ]
 
@@ -434,6 +457,11 @@ gol3$database <- "gol"
 # convert gol Status "Accepted" to "Approved"
 accepted_index <- which(gol3$Status == "Accepted")
 gol3$Status[accepted_index] <- "Approved"
+
+# change Grant Status of "Expired" or "Expired - De-obligated" to Approved
+# these were Approved, but their Period of Performance has run out and they are finished
+gol3 <- gol3 %>% mutate(Status = case_when(.$Status %in% c("Expired", "Expired - De-obligated") ~ "Approved",
+                                                 TRUE ~ .$Status))
 
 # need to convert gol data fields to posix in order to rbind without error
 gol3$Report.Date.3.years[1] <- "1996-09-05"
@@ -448,29 +476,34 @@ gol3$Report.Date.9.years[1] <- NA
 gol3$PCL.Date[1] <- "1996-09-05"
 gol3$PCL.Date <- ymd(gol3$PCL.Date)
 gol3$PCL.Date[1] <- NA
-gol3$X.PPS._Date[1] <- "1996-09-05"
-gol3$X.PPS._Date <- ymd(gol3$X.PPS._Date)
-gol3$X.PPS._Date[1] <- NA
-gol3$PRD.Date[1] <- "1996-09-05"
-gol3$PRD.Date <- ymd(gol3$PRD.Date)
-gol3$PRD.Date[1] <- NA
-gol3$X.PPE._Date[1] <- "1996-09-05"
-gol3$X.PPE._Date <- ymd(gol3$X.PPE._Date)
-gol3$X.PPE._Date[1] <- NA
+# gol3$X.PPS._Date[1] <- "1996-09-05"
+# gol3$X.PPS._Date <- ymd(gol3$X.PPS._Date)
+# gol3$X.PPS._Date[1] <- NA
+# gol3$PRD.Date[1] <- "1996-09-05"
+# gol3$PRD.Date <- ymd(gol3$PRD.Date)
+# gol3$PRD.Date[1] <- NA
+# gol3$X.PPE._Date[1] <- "1996-09-05"
+# gol3$X.PPE._Date <- ymd(gol3$X.PPE._Date)
+# gol3$X.PPE._Date[1] <- NA
 gol3$X.PX1._Date[1] <- "1996-09-05"
 gol3$X.PX1._Date <- ymd(gol3$X.PX1._Date)
 gol3$X.PX1._Date[1] <- NA
 gol3$X.PX2._Date[1] <- "1996-09-05"
 gol3$X.PX2._Date <- ymd(gol3$X.PX2._Date)
 gol3$X.PX2._Date[1] <- NA
-gol3$GSD.Date[1] <- "1996-09-05"
-gol3$GSD.Date <- ymd(gol3$GSD.Date)
-gol3$GSD.Date[1] <- NA
-gol3$GPE.Date[1] <- "1996-09-05"
-gol3$GPE.Date <- ymd(gol3$GPE.Date)
-gol3$GPE.Date[1] <- NA
+# gol3$GSD.Date[1] <- "1996-09-05"
+# gol3$GSD.Date <- ymd(gol3$GSD.Date)
+# gol3$GSD.Date[1] <- NA
+# gol3$GPE.Date[1] <- "1996-09-05"
+# gol3$GPE.Date <- ymd(gol3$GPE.Date)
+# gol3$GPE.Date[1] <- NA
 gol3$DEC.Date <- mdy_hm(gol3$DEC.Date)
 gol3$PPR.Date <- mdy_hm(gol3$PPR.Date)
+gol3$X.PPS._Date <- mdy_hm(gol3$X.PPS._Date)
+gol3$X.PPE._Date <- mdy_hm(gol3$X.PPE._Date)
+gol3$GSD.Date <- mdy_hm(gol3$GSD.Date)
+gol3$GPE.Date <- mdy_hm(gol3$GPE.Date)
+gol3$PRD.Date <- mdy_hm(gol3$PRD.Date)
 
 # rbind gol data to merged oit and opcs data
 merged <- rbind(merged, gol3)
