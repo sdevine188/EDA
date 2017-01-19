@@ -535,7 +535,8 @@ shiny_app_data <- rename(shiny_app_data, "Control.No." = Control., "EDA.Funding"
        # "PRD.Code" = X.PRD._Action.Code, "PRD.Date" = X.PRD._Date, "PCL.Date" = X.PCL._Date, 
        "PPS.Date" = X.PPS._Date, "PPE.Date" = X.PPE._Date, "PX1.Date" = X.PX1._Date, 
        "PX2.Date" = X.PX2._Date, "Local.Applicant.Match" = Local.Applicant.., "Coapp.DUNS" = Coapp.DUNS.., "Coapp.IRS" = Coapp.IRS.., 
-       "Coapp.Appl.ZIP" = Coapp.Appl..Zip, "Est.Jobs.Created" = Jobs.Created, "Est.Jobs.Saved" = Jobs.Saved)
+       "Coapp.Appl.ZIP" = Coapp.Appl..Zip, "Est.Jobs.Created" = Jobs.Created, "Est.Jobs.Saved" = Jobs.Saved,
+       "Est.Private.Investment" = Private.Investment)
 
 
 
