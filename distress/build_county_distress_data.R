@@ -38,10 +38,14 @@ fips %>% filter(!(fips$fips_state_county %in% sa$fips_state_county)) %>% select(
 
 sa %>% filter(!(sa$fips_state_county %in% fips$fips_state_county)) %>% select(County, State, fips_state_county)
 
-# choroplethr packages' county_choroplethr defaults to 3143 counties, which matches census
+# choroplethr packages' county_choroplethr defaults to 3143 counties, which matches census fips
 # statsamerica seems to be missing four counties, and including two counties that census/choroplethr do not track
-# sticking with census/choroplethr to avoid mapping holes
+# sticking with census tiger line file though, which matches pc_inc
 
+# shannon county, sd is now oglala county, sd
+# https://en.wikipedia.org/wiki/Oglala_Lakota_County,_South_Dakota
+
+# census tiger line files 2016 also include kusilvak, ak 02158
 
 ####################################################
 
@@ -53,7 +57,6 @@ date <- str_replace_all(date, "-", "")
 pc_inc_filename = str_c("income/pc_inc_5yr_acs_", date, ".csv")
 write(pc_inc, file = pc_inc_filename)
 pc_inc <- read.csv("income/pc_inc_5yr_acs_20170130.csv")
-
 
 # clean data and rename columns
 pc_inc <- as.data.frame(lapply(pc_inc, function(x) str_replace(x, "\\[", "")))
@@ -70,27 +73,8 @@ fips %>% filter(!(fips$fips_state_county %in% pc_inc$fips_state_county)) %>% sel
 pc_inc %>% filter(!(pc_inc$fips_state_county %in% fips$fips_state_county)) %>% select(county_state, fips_state_county)
 # pc_inc is missing three of the four counties that sa and bls are missing
 
-# convert pc_inc variables from factors to characters to allow rbind of new counties
-str(pc_inc)
-pc_inc$pc_inc <- as.numeric(as.character(pc_inc$pc_inc))
-pc_inc$county_state <- as.character(pc_inc$county_state)
-pc_inc$fips_county <- str_pad(as.character(pc_inc$fips_county), 2, "left", 0)
-
-# create and merge records, interpolating state average pc_inc
-head(pc_inc)
-state_avg_pc_inc <- pc_inc %>% filter(fips_state %in% c("02", "46", "51")) %>% group_by(fips_state) %>% 
-        summarize(avg_pc_inc = mean(pc_inc, na.rm = TRUE))
-c_02270 <- c(state_avg_pc_inc$avg_pc_inc[1], "Wade Hampton Census Area, Alaska", "02", "270", "02270")
-c_46113 <- c(state_avg_pc_inc$avg_pc_inc[2], "Shannon County, South Dakota", "46", "113", "46113")
-c_51515 <- c(state_avg_pc_inc$avg_pc_inc[3], "Bedford city", "51", "515", "51515")
-
-pc_inc <- rbind(pc_inc, c_02270, c_46113, c_51515)
-
-# remove PR and two non-census counties, and recheck county overlap
-fips %>% filter(!(fips$fips_state_county %in% pc_inc$fips_state_county)) %>% select(county, state, fips_state_county)
-pc_inc %>% filter(!(pc_inc$fips_state_county %in% fips$fips_state_county)) %>% select(county_state, fips_state_county)
-
-pc_inc <- pc_inc %>% filter(fips_state_county %in% fips$fips_state_county)
+# filter pc_inc down to 3142 counties
+pc_inc <- pc_inc %>% filter(fips_state_county %in% fips$fips_state_county | fips_state_county %in% c("02158", "46102"))
 
 dim(pc_inc)
 dim(fips)
@@ -187,6 +171,9 @@ fips_info <- select(fips, state, fips_state_county)
 counties <- pc_inc
 counties <- left_join(counties, fips_info, by = "fips_state_county")
 
+length(unique(pc_inc$fips_state_county))
+length(unique(counties$fips_state_county))
+which(!(pc_inc$fips_state_county %in% counties$fips_state_county))
 
 #########################################################3
 
@@ -204,44 +191,32 @@ names(unemp_sum_cast) <- c("fips_state_county", "unemployed", "employed", "labor
 #####################################################
 
 
-# check unemp_sum_cast for number of counties
-# bls counties match stats america with 3141, don't match census/choroplethr
-dim(unemp_sum_cast)
-str(unemp_sum_cast)
-head(unemp_sum_cast)
-length(unique(unemp_sum_cast$fips_state_county))
-fips %>% filter(!(fips$fips_state_county %in% unemp_sum_cast$fips_state_county)) %>% select(county, state, fips_state_county)
+# check county overlap
+# same as pc_inc, bls has 02158 ak and 46102 SD, but is missing the four from fips 02270, 15005, 46113, 51515
+# bls has 3141 counties, pc_inc has 3142; pc_inc includes 15005 (HI) - so does census tiger line shapefile
+# will add interpolated value for 15005 to unemp 
+fips %>% filter(!(fips$fips_state_county %in% unemp_nat$fips_state_county)) %>% select(county, state, fips_state_county)
 unemp_sum_cast %>% filter(!(unemp_sum_cast$fips_state_county %in% fips$fips_state_county)) %>% distinct(fips_state_county)
+pc_inc %>% filter(!(pc_inc$fips_state_county %in% unemp_sum_cast$fips_state_county)) %>% distinct(fips_state_county)
+
+length(unique(unemp_sum_cast$fips_state_county))
 
 # create and merge records, interpolating state average value
-state_avg_value <- unemp_sum_cast %>% mutate(fips_state = str_sub(fips_state_county, 1, 2)) %>% 
-        filter(fips_state %in% c("02", "15", "46", "51")) %>% group_by(fips_state) %>% 
+state_avg_value <- unemp_sum_cast %>% mutate(fips_state = str_sub(fips_state_county, 1, 2)) %>%
+        filter(fips_state == "15") %>% group_by(fips_state) %>%
         summarize(avg_unemployed = mean(unemployed, na.rm = TRUE), avg_employed = mean(employed, na.rm = TRUE),
                                 avg_laborforce = mean(laborforce, na.rm = TRUE))
 
-c_02270 <- c("02270", state_avg_value$avg_unemployed[state_avg_value$fips_state == "02"], 
-             state_avg_value$avg_employed[state_avg_value$fips_state == "02"],
-             state_avg_value$avg_laborforce[state_avg_value$fips_state == "02"])
-c_15005 <- c("15005", state_avg_value$avg_unemployed[state_avg_value$fips_state == "15"], 
+c_15005 <- c("15005", state_avg_value$avg_unemployed[state_avg_value$fips_state == "15"],
              state_avg_value$avg_employed[state_avg_value$fips_state == "15"],
              state_avg_value$avg_laborforce[state_avg_value$fips_state == "15"])
-c_46113 <- c("46113", state_avg_value$avg_unemployed[state_avg_value$fips_state == "46"], 
-             state_avg_value$avg_employed[state_avg_value$fips_state == "46"],
-             state_avg_value$avg_laborforce[state_avg_value$fips_state == "46"])
-c_51515 <- c("51515", state_avg_value$avg_unemployed[state_avg_value$fips_state == "51"], 
-             state_avg_value$avg_employed[state_avg_value$fips_state == "51"],
-             state_avg_value$avg_laborforce[state_avg_value$fips_state == "51"])
 
-unemp_sum_cast <- rbind(unemp_sum_cast, c_02270, c_15005, c_46113, c_51515)
+unemp_sum_cast <- rbind(unemp_sum_cast, c_15005)
 
-# remove two non-census counties, and recheck county overlap
+# recheck county overlap
 fips %>% filter(!(fips$fips_state_county %in% pc_inc$fips_state_county)) %>% select(county, state, fips_state_county)
 unemp_sum_cast %>% filter(!(unemp_sum_cast$fips_state_county %in% fips$fips_state_county)) %>% select(fips_state_county)
 
-unemp_sum_cast <- unemp_sum_cast %>% filter(fips_state_county %in% fips$fips_state_county)
-
-dim(unemp_sum_cast)
-dim(fips)
 length(unique(unemp_sum_cast$fips_state_county))
 
 # convert values to numeric
@@ -279,12 +254,16 @@ counties$unemp_distress <- sapply(1:nrow(counties), function(x)
 
 counties$unemp_threshold <- sapply(1:nrow(counties), function(x) (counties$unemp_rate[x] - counties$unemp_rate_nat[x]))
 
+counties <- counties %>% mutate(eda_distress = ifelse(pc_inc_distress == 1 | .$unemp_distress == 1, 1, 0))
+
+length(unique(counties$fips_state_county))
+
 # write output file
 date <- as.character(Sys.Date())
 date <- str_replace_all(date, "-", "")
 counties_filename <- str_c("counties_", date, ".csv")
 write_csv(counties, counties_filename)
 
-counties <- read_csv("counties_20170131.csv")
+counties <- read_csv("counties_20170201.csv")
 
 

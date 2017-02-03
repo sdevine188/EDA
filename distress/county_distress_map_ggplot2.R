@@ -1,6 +1,4 @@
-library(choroplethr)
 library(readr)
-library(choroplethrMaps)
 library(ggplot2)
 library(dplyr)
 library(datasets)
@@ -10,94 +8,51 @@ library(scales)
 library(RColorBrewer)
 
 
+# load us_county_shapefiles from tiger line file instead of base-R shapefiles
+
 # setwd
-setwd("G:/PNP/Performance Measurement/Data Calls/General Information/20170125/county_distress_map")
+setwd("C:/Users/Stephen/Desktop/R/EDA/distress")
 
-# load data on county distress 
-counties <- read_csv("counties_20170131.csv")
+# load lat/long map data for state boundaries - excluding alaska and hawaii
+state_map <- read_csv("states_shapefiles_dataframe.csv")
 
-# create region and value variables, which county_choropleth function uses
-counties$region <- counties$fips_state_county
-# remove leading zero on fips_state_county
-for(i in 1:nrow(counties)) {
-        if(str_sub(counties$region[i], 1, 1) == "0") {
-                counties$region[i] <- str_sub(counties$region[i], 2, nchar(counties$region[i]))
-        } 
-}
-counties$region <- as.numeric(counties$fips_state_county)
+# load us_county_shapefiles
+county_df <- read_csv("us_counties_shapefiles_dataframe.csv")
+
+# create fips variable for merge with counties data
+county_df <- county_df %>% mutate(fips_state_county = str_c(fips_state, fips_county)) %>% data.frame(.)
+
+#################################################
 
 
-counties$value <- counties$pc_inc_distress
+# create us choropleth
+choropleth <- county_df
 
-counties <- data.frame(counties)
+# exclude alaska and hawaii
+head(choropleth)
+choropleth <- choropleth %>% filter(!(fips_state %in% c("02", "15")))
+state_map_input <- state_map %>% filter(id %in% unique(choropleth$fips_state)) 
 
-# create choropleth
-county_choropleth(counties, title = "2016 EDA Distress Map - Per Capita Money Income")
+# check that choropleth and state_map has same states
+# length will differ due to an NA
+length(unique(choropleth$state))
+unique(choropleth$fips_state)
+length(unique(choropleth$fips_state_county))
 
+length(unique(state_map_input$id))
+unique(state_map_input$id)
 
-######################################################
+unique(choropleth$fips_state)[which(!(unique(choropleth$fips_state) %in% unique(state_map_input$id)))]
+unique(state_map_input$id)[which(!(unique(state_map_input$id) %in% unique(choropleth$fips_state)))]
 
-# choropleth in ggplot
-# create county and state polygon files
-
-# load lat/long map data for county and state boundaries
-county_map <- map_data("county")
-state_map <- map_data("state")
-
-# attach unemployment data and county fips code data
-data(unemp)
-data(county.fips)
-
-# create states dataframe with state names and abbreviations
-states <- data.frame(state.abb, state.name)
-states$state.name <- tolower(state.name)
-
-# merge states with county_map to create county_df
-county_df <- merge(county_map, states, by.x = "region", by.y = "state.name")
-
-# create a polyname variable in county_df to use for merge with county.fips
-county_df$polyname <- str_c(county_df$region, county_df$subregion, sep = ",")
-
-# merge county_df with county.fips based on polyname
-county_df <- merge(county_df, county.fips, by = "polyname")
-
-
-#####################################################
-
-
-# merge in data of interest
-
-# merge county_df with pc_inc_distress based on fips
-# setwd
-setwd("G:/PNP/Performance Measurement/Data Calls/General Information/20170125/county_distress_map")
-
-# load data on county distress 
-counties <- read_csv("counties_20170131.csv")
-counties <- data.frame(counties)
-
-# create eda_distress flag for either criteria met
-counties$eda_distress <- ifelse(counties$pc_inc_distress == 1 | counties$unemp_distress == 1, 1, 0)
-
-# create region and value variables, which county_choropleth function uses
-counties$region <- counties$fips_state_county
-# remove leading zero on fips_state_county
-for(i in 1:nrow(counties)) {
-        if(str_sub(counties$region[i], 1, 1) == "0") {
-                counties$region[i] <- str_sub(counties$region[i], 2, nchar(counties$region[i]))
-        } 
-}
-counties$region <- as.numeric(counties$fips_state_county)
-
-pc_inc_distress_df <- counties %>% select(region, pc_inc_distress)
-names(pc_inc_distress_df)[1] <- "fips"
-
-choropleth <- left_join(county_df, pc_inc_distress_df, by = "fips")
-
-# choropleth <- left_join(choropleth, pc_inc_distress_df, by = "fips")
-
-
-# order choropleth
+# order choropleth and state_map
 choropleth <- choropleth[order(choropleth$order), ]
+state_map_input <- state_map_input[order(state_map_input$order), ]
+
+# test fill in data for 46102
+# choropleth %>% filter(id == "46102") %>% select(id, eda_distress)
+# choropleth <- choropleth %>% mutate(eda_distress = case_when(.$id == "46102" ~ 1, TRUE ~ .$eda_distress))
+# choropleth %>% filter(id == "46102") %>% select(id, eda_distress)
 
 # select color palette using brewer.pal
 # then use colorRampPalette to build a function "pal" which divides the palette by a given number of factors
@@ -107,11 +62,11 @@ pal <- colorRampPalette(colors)
 # pal is a function, which takes a number as it's argument eg. pal(14)
 # to generalize: pal(length(unique(choropleth$rate_d1)))
 
-# create levels for pc_inc_distress for use in legend names
-choropleth <- choropleth %>% mutate(pc_inc_distress_fct = case_when(.$pc_inc_distress == "0" ~ "Not Distressed", .$pc_inc_distress == "1" ~ "Distressed"))
-choropleth$pc_inc_distress_fct <- factor(choropleth$pc_inc_distress_fct)
+# create levels for eda_distress for use in legend names
+choropleth <- choropleth %>% mutate(eda_distress_fct = case_when(.$eda_distress == "0" ~ "Not Distressed", .$eda_distress == "1" ~ "Distressed"))
+choropleth$eda_distress_fct <- factor(choropleth$eda_distress_fct)
 levels <- c("Not Distressed", "Distressed")
-choropleth$pc_inc_distress_fct2 <- factor(choropleth$pc_inc_distress_fct, levels = levels, ordered = TRUE)
+choropleth$eda_distress_fct2 <- factor(choropleth$eda_distress_fct, levels = levels, ordered = TRUE)
 
 
 ####################################################
@@ -120,10 +75,9 @@ choropleth$pc_inc_distress_fct2 <- factor(choropleth$pc_inc_distress_fct, levels
 # create choropleth of all counties in US
 # will take a minute to load 
 choropleth_input <- choropleth
-state_map_input <- state_map
 
 ggplot(data = choropleth_input, aes(x = long, y = lat, group = group)) +
-        geom_polygon(aes(fill = pc_inc_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
+        geom_polygon(aes(fill = eda_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
         geom_polygon(data = state_map_input, colour = "black", fill = NA) +
         scale_fill_manual(values = c("#3333ff", "#ff3300")) + theme_bw() + theme(plot.background = element_blank(), panel.grid.major = element_blank(),
        panel.grid.minor = element_blank(), panel.border = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(), 
@@ -135,32 +89,26 @@ ggplot(data = choropleth_input, aes(x = long, y = lat, group = group)) +
 
 
 # create choropleth for hawaii
+choropleth <- county_df %>% filter(fips_state == "15") %>% data.frame(.)
+state_map_input <- state_map %>% filter(id %in% unique(choropleth$fips_state)) 
 
-# setwd
-setwd("G:/PNP/Performance Measurement/Data Calls/General Information/20170125/county_distress_map")
-
-# load pre-created shape file with counties distress criteria already merged
-choropleth <- read_csv("hawaii_shape.csv")
-choropleth <- data.frame(choropleth)
-
-# create eda_distress flag for either criteria met
-choropleth$eda_distress <- ifelse(choropleth$pc_inc_distress == 1 | choropleth$unemp_distress == 1, 1, 0)
-
-# order choropleth
+# order choropleth and state_map_input
 choropleth <- choropleth[order(choropleth$order), ]
+state_map_input <- state_map_input[order(state_map_input$order), ]
 
-# create levels for pc_inc_distress for use in legend names
-choropleth <- choropleth %>% mutate(pc_inc_distress_fct = case_when(.$pc_inc_distress == "0" ~ "Not Distressed", .$pc_inc_distress == "1" ~ "Distressed"))
-choropleth$pc_inc_distress_fct <- factor(choropleth$pc_inc_distress_fct)
+# create levels for eda_distress for use in legend names
+choropleth <- choropleth %>% mutate(eda_distress_fct = case_when(.$eda_distress == "0" ~ "Not Distressed", .$eda_distress == "1" ~ "Distressed"))
+choropleth$eda_distress_fct <- factor(choropleth$eda_distress_fct)
 levels <- c("Not Distressed", "Distressed")
-choropleth$pc_inc_distress_fct2 <- factor(choropleth$pc_inc_distress_fct, levels = levels, ordered = TRUE)
+choropleth$eda_distress_fct2 <- factor(choropleth$eda_distress_fct, levels = levels, ordered = TRUE)
 
 # create choropleth input
-choropleth_input <- choropleth %>% filter(state == "HI")
+choropleth_input <- choropleth
 
 # create choropleth 
 ggplot(data = choropleth_input, aes(x = long, y = lat, group = group)) +
-        geom_polygon(aes(fill = pc_inc_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
+        geom_polygon(aes(fill = eda_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
+        geom_polygon(data = state_map_input, colour = "black", fill = NA) +
         scale_fill_manual(values = c("#3333ff", "#ff3300")) + theme_bw() + theme(plot.background = element_blank(), panel.grid.major = element_blank(),
          panel.grid.minor = element_blank(), panel.border = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(), 
          axis.ticks.x = element_blank(), axis.text.x = element_blank(), plot.title = element_text(size = 20, face = "bold")) + 
@@ -171,32 +119,26 @@ ggplot(data = choropleth_input, aes(x = long, y = lat, group = group)) +
 
 
 # create choropleth for alaska
+choropleth <- county_df %>% filter(fips_state == "02") %>% data.frame(.)
+state_map_input <- state_map %>% filter(id %in% unique(choropleth$fips_state)) 
 
-# setwd
-setwd("G:/PNP/Performance Measurement/Data Calls/General Information/20170125/county_distress_map")
-
-# load pre-created shape file with counties distress criteria already merged
-choropleth <- read_csv("alaska_shape.csv")
-choropleth <- data.frame(choropleth)
-
-# create eda_distress flag for either criteria met
-choropleth$eda_distress <- ifelse(choropleth$pc_inc_distress == 1 | choropleth$unemp_distress == 1, 1, 0)
-
-# order choropleth
+# order choropleth and state_map_input
 choropleth <- choropleth[order(choropleth$order), ]
+state_map_input <- state_map_input[order(state_map_input$order), ]
 
-# create levels for pc_inc_distress for use in legend names
-choropleth <- choropleth %>% mutate(pc_inc_distress_fct = case_when(.$pc_inc_distress == "0" ~ "Not Distressed", .$pc_inc_distress == "1" ~ "Distressed"))
-choropleth$pc_inc_distress_fct <- factor(choropleth$pc_inc_distress_fct)
+# create levels for eda_distress for use in legend names
+choropleth <- choropleth %>% mutate(eda_distress_fct = case_when(.$eda_distress == "0" ~ "Not Distressed", .$eda_distress == "1" ~ "Distressed"))
+choropleth$eda_distress_fct <- factor(choropleth$eda_distress_fct)
 levels <- c("Not Distressed", "Distressed")
-choropleth$pc_inc_distress_fct2 <- factor(choropleth$pc_inc_distress_fct, levels = levels, ordered = TRUE)
+choropleth$eda_distress_fct2 <- factor(choropleth$eda_distress_fct, levels = levels, ordered = TRUE)
 
 # create choropleth input
-choropleth_input <- choropleth %>% filter(state == "AK")
+choropleth_input <- choropleth
 
 # create choropleth 
 ggplot(data = choropleth_input, aes(x = long, y = lat, group = group)) +
-        geom_polygon(aes(fill = pc_inc_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
+        geom_polygon(aes(fill = eda_distress_fct2), colour = alpha("white", 1/2), size = 0.2) + 
+        geom_polygon(data = state_map_input, colour = "black", fill = NA) +
         scale_fill_manual(values = c("#3333ff", "#ff3300")) + theme_bw() + theme(plot.background = element_blank(), panel.grid.major = element_blank(),
                                                                                  panel.grid.minor = element_blank(), panel.border = element_blank(), axis.ticks.y = element_blank(), axis.text.y = element_blank(), 
                                                                                  axis.ticks.x = element_blank(), axis.text.x = element_blank(), plot.title = element_text(size = 20, face = "bold")) + 
