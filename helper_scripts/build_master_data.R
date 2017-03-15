@@ -32,7 +32,7 @@ opcs2$Appl.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
 # pad Proj.FIPS.ST and Proj.Cong.Dist, and create Proj.State.Cong variable as unique congressional district identifier 
 opcs2$Proj.FIPS.ST <- str_pad(opcs2$Proj.FIPS.ST, width = 2, side = "left", pad = "0")
 opcs2$Proj.Cong.Dist <- str_pad(opcs2$Proj.Cong.Dist, width = 2, side = "left", pad = "0")
-opcs2$Proj.State.Cong <- str_c(opcs2$Appl.FIPS.ST, opcs2$Appl.Cong.Dist)
+opcs2$Proj.State.Cong <- str_c(opcs2$Proj.FIPS.ST, opcs2$Proj.Cong.Dist)
 
 # pad DUNS with zeroes
 errors_index <- which(nchar(opcs2$DUNS..) < 9 & nchar(opcs2$DUNS..) > 0)
@@ -63,7 +63,7 @@ for(i in 1:nrow(opcs2)) {
         }
 }
 
-# create id variable and get distinct id
+# create id variable and get distinct id - still will be some remaining duplicates due to coapplicants
 opcs2 <- opcs2 %>% mutate(id = str_c(str_replace_na(opcs2$Control.), str_replace_na(opcs2$Appl.Short.Name), sep = "_")) %>%
         distinct(id, .keep_all = TRUE)
 row_id <- data.frame(row_id = seq_along(1:nrow(opcs2)))
@@ -75,11 +75,14 @@ dup_control_numbers <- opcs2$Control.[dup_control_index]
 total_dup_records <- opcs2 %>% filter(Control. %in% dup_control_numbers)
 # create value for test to confirm no control numbers being dropped with filter for comp.code = 1, appl.lead = y, and is.na(appl.short.name)
 total_dup_count <- length(unique(total_dup_records$Control.))
-# filter total_dup_records 
+# filter total_dup_records to find lead applicants
 dup_lead_app_records <- total_dup_records %>% filter(Comp.Code == "1" & Appl.Lead..Y.N. == "Y") %>% filter(!is.na(Appl.Short.Name))
 # manually add lead applicant records for any found via inspection that don't have both comp.code = 1 and appl.lead = Y due to data entry errors
-manual_lead <- opcs2 %>% filter(Control. == 59398 & Appl.Short.Name == "Los Angeles, City of" | 
-                                        Control. == 59399 & Appl.Short.Name == "Cdc of Los Angeles" | Control. == 96739 & Appl.Short.Name == "West TX A&M Univ")
+manual_lead <- opcs2 %>% filter(Control. == 96739 & Appl.Short.Name == "West TX A&M Univ" |
+                                        Control. == 110646 & Appl.Short.Name == "Somerset County, PA" |
+                                        Control. == 59400 & Appl.Short.Name == "Simi Valley, City of" |
+                                        Control. == 59749 & Appl.Short.Name == "American Samoa Govt of" |
+                                        Control. == 96924 & Appl.Short.Name == "Univ of Nevada, Reno")
 dup_lead_app_records <- bind_rows(dup_lead_app_records, manual_lead)
 # run test to confim no untracked duplicates requiring manual handling
 lead_app_count <- length(unique(dup_lead_app_records$Control.))
@@ -88,6 +91,15 @@ if(total_dup_count == lead_app_count) {
 } else {
         stop("untracked duplicates detected: total_dup_count is greater than dup_control_count, so some records must be manually handled")
 }
+
+# if you get error above for untracked duplicates where comp.code !=1 and appl.lead != Y, need to inspect and manually add them 
+# untracked_dup_index <- which(!(unique(total_dup_records$Control.) %in% unique(dup_lead_app_records$Control.)))
+# untracked_dup_control_no <- unique(total_dup_records$Control.)[untracked_dup_index]
+# untracked_dups <- total_dup_records %>% filter(Control. %in% untracked_dup_control_no)
+# untracked_dups %>% select(Control., Appl.Short.Name, Full.Applicant.Name, Appl.Lead..Y.N., Comp.Code)
+# total_dup_records %>% filter(Control. %in% untracked_dup_control_no) %>%
+#         select(Control., Appl.Short.Name, Appl.Lead..Y.N., Comp.Code) %>% arrange(Control.)
+
 # flag coapplicant records
 opcs2$coapp <- NA
 coapp_records <- opcs2 %>% filter(Control. %in% dup_lead_app_records$Control., !(row_id %in% dup_lead_app_records$row_id))
@@ -219,13 +231,13 @@ gol <- read_csv(gol_filename, col_types = list(AWARD_NUMBER = col_character(), A
                                                SPEC_INIT_CODES = col_character(), APPLICANT_ZIP = col_character(), ESTIMATED_PRIVATE_INVESTMENT = col_number(),
                                                DUNS_NUMBER = col_character())) %>% data.frame(.)
 
-gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, PROJECT_DESC,
+gol2 <- select(gol, LINE_OFFICE, PROGRAM_OFFICE, AWARD_NUMBER, APPLICATION_ID, APPLICANT_NAME, PROJECT_TITLE, RECEIVED_DT, FUNDING_FY, PROJECT_DESC,
                AWARD_FED_SHARE, AWARD_NONFED_SHARE, APP_FED_SHARE, APP_NONFED_SHARE, GO_SIGN_DT, CONSTRUCTION_AWARD, GRANT_STATUS, RFA_NAME,
                COMPETITION_NAME, SPEC_INIT_CODES, APPLICANT_STREET, APPLICANT_CITY, APPLICANT_COUNTY, APPLICANT_STATE, APPLICANT_ZIP, 
                ESTIMATED_JOB_CREATED, ESTIMATED_JOB_SAVED, ESTIMATED_PRIVATE_INVESTMENT, APPLICATION_CONTACT, CONTACT_PHONE, CONTACT_EMAIL,
                CFDA_NUMBER, APPLICATION_STATUS, DUNS_NUMBER, MSI_CODE, APPROPRIATION_CODE, ASSIGNED_FPO,
                EIN_NUMBER, FIPS_CITY_CD, FIPS_COUNTY_CD, FIPS_STATE_CD, PROJECT_START_DT, PROJECT_END_DT, AWARD_START_DT, AWARD_END_DT,
-               FIRST_FALD_DT)
+               FIRST_FALD_DT, PROJECT_BENEFIT_AREA, PROJECT_NEED, ANTICIP_ECO_BENEFIT)
 
 # correct DUNS that have four trailing zeroes
 duns_errors <- which(nchar(gol2$DUNS_NUMBER) == 13)
@@ -242,12 +254,13 @@ for(i in 1:nrow(gol2)){
 }
 
 # compute FY, use GO_SIGN_DT if available, otherwise use RECEIVED_DT, will subset year in code below
-gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {gol2$RECEIVED_DT[row]} else 
-{gol2$GO_SIGN_DT[row]})
+# gol2$FY <- sapply(1:nrow(gol2), function(row) if(is.na(gol2$GO_SIGN_DT[row])) {gol2$RECEIVED_DT[row]} else 
+# {gol2$GO_SIGN_DT[row]})
+gol2$FY <- gol2$FUNDING_FY
 
 # convert gol dates to proper format
-gol2$FY <- mdy_hm(gol2$FY)
-gol2$FY <- year(gol2$FY)
+# gol2$FY <- mdy_hm(gol2$FY)
+# gol2$FY <- year(gol2$FY)
 
 # add state and county fips, and congressional district using gol Appl.Zip and HUD's quarterly crosswalk files
 # https://www.huduser.gov/portal/datasets/usps_crosswalk.html
@@ -335,7 +348,7 @@ for(i in 1:nrow(gol2)){
 # add region
 gol2$Region.Name <- NA
 for(i in 1:nrow(gol2)){
-        if(!(is.na(gol2$LINE_OFFICE))){
+        if(!(is.na(gol2$LINE_OFFICE[i]))){
                 if(gol2$LINE_OFFICE[i] == "ATL"){
                         gol2$Region.Name[i] <- "Atlanta"
                 }
@@ -386,8 +399,8 @@ gol3[ , which(names(merged) == "Full.Applicant.Name")] <- gol2$APPLICANT_NAME
 gol3[ , which(names(merged) == "Project.Short.Descrip")] <- gol2$PROJECT_TITLE
 gol3[ , which(names(merged) == "General.Descr.")] <- gol2$PROJECT_DESC
 gol3[ , which(names(merged) == "Scope.of.Work")] <- gol2$PROJECT_DESC
-gol3[ , which(names(merged) == "GNS.Descr.")] <- gol2$PROJECT_DESC
-gol3[ , which(names(merged) == "Economic.Impact.or.Benefit")] <- gol2$PROJECT_DESC
+gol3[ , which(names(merged) == "GNS.Descr.")] <- gol2$PROJECT_NEED
+gol3[ , which(names(merged) == "Economic.Impact.or.Benefit")] <- gol2$ANTICIP_ECO_BENEFIT
 gol3[ , which(names(merged) == "PPR.Date")] <- gol2$RECEIVED_DT
 gol3[ , which(names(merged) == "DEC.Date")] <- gol2$GO_SIGN_DT
 gol3[ , which(names(merged) == "Cons.Non")] <- gol2$CONSTRUCTION_AWARD
@@ -432,6 +445,9 @@ gol3[ , which(names(merged) == "GSD.Date")] <- gol2$AWARD_START_DT
 gol3[ , which(names(merged) == "GPE.Date")] <- gol2$AWARD_END_DT
 gol3[ , which(names(merged) == "PRD.Date")] <- gol2$FIRST_FALD_DT
 gol3[ , which(names(merged) == "EDA.Official.Name")] <- gol2$ASSIGNED_FPO
+gol3[ , which(names(merged) == "Entity.Code")] <- gol2$PROJECT_BENEFIT_AREA
+
+
 
 
 # compute Best.EDA.., Local.Applicant.., and Total.Project.. from award_fed_share if available, app_nonfed_share if not
@@ -510,6 +526,7 @@ merged <- rbind(merged, gol3)
 
 # create Program variable spelling out the Prog.Abbr variable
 merged$Program <- merged$Prog.Abbr
+
 for(i in 1:nrow(merged)){
         if(!(is.na(merged$Program[i]))){
                 if(merged$Program[i] == "PW"){
@@ -558,7 +575,7 @@ for(i in 1:nrow(merged)){
                         merged$Program[i] <- "Technical Assistance"
                 }
                 if(merged$Program[i] == "OIE"){
-                        merged$Program[i] <- "Office of Innovation and Entrepreneurship"
+                        merged$Program[i] <- "Regional Innovation Strategies"
                 }
                 if(merged$Program[i] == "RNTA"){
                         merged$Program[i] <- "Research and National Technical Assistance"
@@ -625,6 +642,9 @@ for(i in 1:nrow(merged)){
                 }
                 if(merged$Prog.Abbr[i] == "TA-SRO"){
                         merged$Prog.Abbr[i] <- "TA"
+                }
+                if(merged$Prog.Abbr[i] == "OIE"){
+                        merged$Prog.Abbr[i] <- "RIS"
                 }
         }
 }
