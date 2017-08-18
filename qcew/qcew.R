@@ -8,8 +8,8 @@ library(lazyeval)
 
 # setwd
 # setwd("H:/PNP/SRI Baseline Metrics")
-setwd("C:/Users/sdevine/Desktop/SRI Baseline Metrics")
-# setwd("G:/PNP/Performance Measurement/SRI Baseline Metrics")
+# setwd("C:/Users/sdevine/Desktop/SRI Baseline Metrics")
+setwd("G:/PNP/Performance Measurement/SRI Baseline Metrics")
 
 # scrape county fips from census and save as txt file
 fips_html <- html("http://www2.census.gov/geo/docs/reference/codes/files/national_county.txt")
@@ -43,7 +43,8 @@ fips$fips_state_county <- str_c(fips$fips_state, fips$fips_county)
 
 # get qcew data from bls api
 # pre-built bls api function: https://data.bls.gov/cew/doc/access/data_access_examples.htm#RSCRIPT
-# data guide and csv: https://www.bls.gov/cew/doctoc.htm
+# data guide: https://www.bls.gov/cew/doctoc.htm
+# data csv: https://www.bls.gov/cew/datatoc.htm
 # data tables for reference: https://data.bls.gov/cew/apps/data_views/data_views.htm#tab=Tables
 # layout of data slices: https://data.bls.gov/cew/doc/access/csv_data_slices.htm
 # can use bls multi-screen tool for multiple year downloads, but it chokes if you select even half the counties: https://data.bls.gov/cgi-bin/dsrv?en
@@ -52,8 +53,8 @@ fips$fips_state_county <- str_c(fips$fips_state, fips$fips_county)
 # save unzipped quarterly csv by area; be sure to delete MSA files listed after county files to improve speed
 
 # setwd()
-setwd("C:/Users/sdevine/Desktop/SRI Baseline Metrics/qcew")
-# setwd("G:/PNP/Performance Measurement/SRI Baseline Metrics/qcew")
+# setwd("C:/Users/sdevine/Desktop/SRI Baseline Metrics/qcew")
+setwd("G:/PNP/Performance Measurement/SRI Baseline Metrics/qcew")
 
 # define year ranges (2012 is earliest year available)
 year_start <- 2014
@@ -139,13 +140,6 @@ for(year in year_range) {
                 
                 establishments_5yr_prior <- county_data %>% filter(own_code == 0, industry_code == 10) %>% 
                         select(area_fips, annual_avg_estabs_count)
-
-                # get levels for current year
-                # employment_column_index <- which(str_detect(names(fips), as.character(year)) == TRUE)[1]
-                # current_employment <- fips[i, employment_column_index]
-                # 
-                # establishments_column_index <- which(str_detect(names(fips), as.character(year)) == TRUE)[3]
-                # current_establishments <- fips[i, establishments_column_index]
                 
                 # calculate growth from 5 year prior
                 employment_growth_5yr_prior <- ((employment$annual_avg_emplvl - employment_5yr_prior$annual_avg_emplvl) / employment_5yr_prior$annual_avg_emplvl) * 100
